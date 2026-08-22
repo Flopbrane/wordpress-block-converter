@@ -4,10 +4,12 @@ from blocks.code import create_code_block
 from blocks.embed import create_embed_block
 from blocks.heading import create_heading_block
 from blocks.html_block import create_html_block
+from blocks.image import create_image_block
 from blocks.list_block import create_list_block
 from blocks.paragraph import create_paragraph_block
 from blocks.quote import create_quote_block
 from blocks.spacer import create_spacer_block
+from blocks.table import create_table_block
 
 
 HTML_EXTENSIONS = {".html", ".htm"}
@@ -70,6 +72,87 @@ VIDEO_EMBED_PROVIDERS = {
     "twitch.tv": "twitch",
 }
 
+EMBED_PROVIDER_RULES = {
+    "youtube.com/shorts": {
+        "providerNameSlug": "youtube",
+        "type": "video",
+        "responsive": True,
+        "aspect": "16-9",
+    },
+    "youtube.com": {
+        "providerNameSlug": "youtube",
+        "type": "video",
+        "responsive": True,
+        "aspect": "16-9",
+    },
+    "youtu.be": {
+        "providerNameSlug": "youtube",
+        "type": "video",
+        "responsive": True,
+        "aspect": "16-9",
+    },
+    "tiktok.com": {
+        "providerNameSlug": "tiktok",
+        "type": "video",
+        "responsive": True,
+        "aspect": None,
+    },
+    "vimeo.com": {
+        "providerNameSlug": "vimeo",
+        "type": "video",
+        "responsive": True,
+        "aspect": "16-9",
+    },
+    "instagram.com": {
+        "providerNameSlug": "instagram",
+        "type": "rich",
+        "responsive": True,
+        "aspect": None,
+    },
+    "twitter.com": {
+        "providerNameSlug": "twitter",
+        "type": "rich",
+        "responsive": True,
+        "aspect": None,
+    },
+    "x.com": {
+        "providerNameSlug": "twitter",
+        "type": "rich",
+        "responsive": True,
+        "aspect": None,
+    },
+    "dailymotion.com": {
+        "providerNameSlug": "dailymotion",
+        "type": "video",
+        "responsive": True,
+        "aspect": "16-9",
+    },
+    "twitch.tv": {
+        "providerNameSlug": "twitch",
+        "type": "video",
+        "responsive": True,
+        "aspect": "16-9",
+    },
+    "ted.com": {
+        "providerNameSlug": "ted",
+        "type": "video",
+        "responsive": True,
+        "aspect": "16-9",
+    },
+    "spotify.com": {
+        "providerNameSlug": "spotify",
+        "type": "rich",
+        "responsive": True,
+        "aspect": None,
+    },
+    "soundcloud.com": {
+        "providerNameSlug": "soundcloud",
+        "type": "rich",
+        "responsive": True,
+        "aspect": None,
+    },
+}
+
 ALLOWED_HTML_TAGS = {
     "p",
     "h1",
@@ -91,6 +174,8 @@ ALLOWED_HTML_TAGS = {
     "th",
     "td",
     "hr",
+    "img",
+    "a",
 }
 
 # 今後使用
@@ -107,11 +192,17 @@ HTML_UNORDERED_LIST_PATTERN = re.compile(r"<ul\b[^>]*>(.*?)</ul>", re.IGNORECASE
 HTML_ORDERED_LIST_PATTERN = re.compile(r"<ol\b[^>]*>(.*?)</ol>", re.IGNORECASE | re.DOTALL)
 HTML_LIST_ITEM_PATTERN = re.compile(r"<li\b[^>]*>(.*?)</li>", re.IGNORECASE | re.DOTALL)
 HTML_QUOTE_PATTERN = re.compile(r"<blockquote\b[^>]*>(.*?)</blockquote>", re.IGNORECASE | re.DOTALL)
+HTML_LINK_PATTERN = re.compile(
+    r"<a\b[^>]*href\s*=\s*['\"]([^'\"]+)['\"][^>]*>(.*?)</a>",
+    re.IGNORECASE | re.DOTALL,
+)
 HTML_CODE_PATTERN = re.compile(
     r"<pre\b[^>]*>(.*?)</pre>|<code\b[^>]*>(.*?)</code>",
     re.IGNORECASE | re.DOTALL,
 )
 HTML_TABLE_PATTERN = re.compile(r"<table\b[^>]*>.*?</table>", re.IGNORECASE | re.DOTALL)
+HTML_IMAGE_PATTERN = re.compile(r"<img\b[^>]*>", re.IGNORECASE | re.DOTALL)
+HTML_ATTRIBUTE_PATTERN = re.compile(r'([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*["\']([^"\']*)["\']')
 HTML_SPACER_PATTERN = re.compile(r"<hr\b[^>]*>", re.IGNORECASE)
 EMBED_URL_PATTERN = re.compile(r"^https?://[^\s<]+$", re.IGNORECASE)
 HTML_BR_PATTERN = re.compile(r"<br\s*/?>", re.IGNORECASE)
@@ -155,7 +246,13 @@ HTML_BLOCK_RULES = {
     "table": {
         "name": "table",
         "pattern": HTML_TABLE_PATTERN,
-        "converter": create_html_block,
+        "converter": create_table_block,
+        "fallback_converter": create_html_block,
+    },
+    "image": {
+        "name": "image",
+        "pattern": HTML_IMAGE_PATTERN,
+        "converter": create_image_block,
     },
     "spacer": {
         "name": "spacer",

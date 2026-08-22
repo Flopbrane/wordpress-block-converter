@@ -3,6 +3,7 @@ import re
 from blocks.code import create_code_block
 from blocks.embed import create_embed_block
 from blocks.heading import create_heading_block
+from blocks.image import create_image_block
 from blocks.list_block import create_list_block
 from blocks.quote import create_quote_block
 from blocks.spacer import create_spacer_block
@@ -23,6 +24,7 @@ MARKDOWN_UNORDERED_LIST_PATTERN = re.compile(r"^\s*[-*+]\s+(.+)$")
 MARKDOWN_ORDERED_LIST_PATTERN = re.compile(r"^\s*\d+[.)]\s+(.+)$")
 MARKDOWN_QUOTE_PATTERN = re.compile(r"^\s*>\s?(.+)$")
 MARKDOWN_SPACER_PATTERN = re.compile(r"^\s*\[spacer(?::(\d+))?\]\s*$", re.IGNORECASE)
+MARKDOWN_IMAGE_PATTERN = re.compile(r"^!\[([^\]]*)\]\((https?://[^\s)]+)\)$")
 MARKDOWN_EMBED_URL_PATTERN = re.compile(r"^https?://[^\s<]+$", re.IGNORECASE)
 
 MARKDOWN_HEADING_RULE = {
@@ -65,6 +67,12 @@ MARKDOWN_SPACER_RULE = {
     "pattern": MARKDOWN_SPACER_PATTERN,
     "converter": create_spacer_block,
     "default_height": 40,
+}
+
+MARKDOWN_IMAGE_RULE = {
+    "name": "image",
+    "pattern": MARKDOWN_IMAGE_PATTERN,
+    "converter": create_image_block,
 }
 
 MARKDOWN_EMBED_RULE = {

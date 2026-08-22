@@ -7,6 +7,7 @@ def create_embed_block(
     provider_name_slug: str,
     embed_type: str = "video",
     responsive: bool = True,
+    aspect: str | None = None,
 ) -> str:
     """外部URLをWordPress Gutenbergのembedブロックに変換します。"""
     safe_url = escape(url.strip())
@@ -23,9 +24,10 @@ def create_embed_block(
         "responsive": responsive,
     }
 
-    if provider_name_slug in {"youtube", "vimeo"}:
-        class_names.extend(["wp-embed-aspect-16-9", "wp-has-aspect-ratio"])
-        attributes["className"] = "wp-embed-aspect-16-9 wp-has-aspect-ratio"
+    if aspect:
+        aspect_class = f"wp-embed-aspect-{aspect}"
+        class_names.extend([aspect_class, "wp-has-aspect-ratio"])
+        attributes["className"] = f"{aspect_class} wp-has-aspect-ratio"
 
     attribute_text = json.dumps(attributes, ensure_ascii=False, separators=(",", ":"))
     class_text = " ".join(class_names)

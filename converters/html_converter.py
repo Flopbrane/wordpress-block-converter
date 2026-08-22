@@ -1,12 +1,14 @@
 from html import unescape
 
 from dictionaries.html_dict import (
+    EMBED_PROVIDER_RULES,
+    HTML_ATTRIBUTE_PATTERN,
     HTML_BLOCK_RULES,
     HTML_BR_PATTERN,
     HTML_EMBED_RULE,
+    HTML_LINK_PATTERN,
     HTML_LIST_ITEM_PATTERN,
     HTML_TAG_PATTERN,
-    VIDEO_EMBED_PROVIDERS,
 )
 
 
@@ -30,11 +32,26 @@ def convert_html_to_gutenberg(load_file: str) -> str:
         rule = HTML_BLOCK_RULES[block_type]
 
         if block_type == "paragraph":
-            paragraph_text = _clean_html_text(block_match.group(1))
+            paragraph_html = block_match.group(1)
+            paragraph_text = _clean_html_text(paragraph_html)
+            if not paragraph_text:
+                image_block = _create_image_block_from_html(paragraph_html)
+                if image_block:
+                    blocks.append(image_block)
+                    continue
+
             if paragraph_text:
-                provider_name_slug = _find_embed_provider(paragraph_text)
-                if provider_name_slug and HTML_EMBED_RULE["pattern"].match(paragraph_text):
-                    blocks.append(HTML_EMBED_RULE["converter"](paragraph_text, provider_name_slug))
+                provider_info = _find_embed_provider(paragraph_text)
+                if provider_info and HTML_EMBED_RULE["pattern"].match(paragraph_text):
+                    blocks.append(
+                        HTML_EMBED_RULE["converter"](
+                            paragraph_text,
+                            provider_info["providerNameSlug"],
+                            embed_type=provider_info["type"],
+                            responsive=provider_info["responsive"],
+                            aspect=provider_info["aspect"],
+                        )
+                    )
                 else:
                     blocks.append(rule["converter"](paragraph_text))
         elif block_type == "heading":
@@ -63,6 +80,10 @@ def convert_html_to_gutenberg(load_file: str) -> str:
                 blocks.append(rule["converter"](code_text))
         elif block_type == "table":
             blocks.append(rule["converter"](block_match.group(0)))
+        elif block_type == "image":
+            image_block = _create_image_block_from_html(block_match.group(0))
+            if image_block:
+                blocks.append(image_block)
         elif block_type == "spacer":
             blocks.append(rule["converter"](rule["height"]))
 
@@ -70,9 +91,16 @@ def convert_html_to_gutenberg(load_file: str) -> str:
 
 
 def _clean_html_text(text: str) -> str:
+    text = HTML_LINK_PATTERN.sub(_convert_html_link_to_markdown_link, text)
     text = HTML_BR_PATTERN.sub("\n", text)
     text = HTML_TAG_PATTERN.sub("", text)
     return unescape(text).strip()
+
+
+def _convert_html_link_to_markdown_link(link_match) -> str:
+    url = link_match.group(1).strip()
+    label = HTML_TAG_PATTERN.sub("", link_match.group(2)).strip()
+    return f"[{label}]({url})"
 
 
 def _extract_list_items(text: str) -> list[str]:
@@ -91,11 +119,32 @@ def _clean_code_text(text: str) -> str:
     return unescape(text).strip()
 
 
-def _find_embed_provider(url: str) -> str | None:
+def _extract_html_attributes(tag_text: str) -> dict[str, str]:
+    return {
+        name.lower(): value
+        for name, value in HTML_ATTRIBUTE_PATTERN.findall(tag_text)
+    }
+
+
+def _create_image_block_from_html(html_text: str) -> str | None:
+    image_rule = HTML_BLOCK_RULES["image"]
+    image_match = image_rule["pattern"].search(html_text)
+    if not image_match:
+        return None
+
+    image_attributes = _extract_html_attributes(image_match.group(0))
+    image_src = image_attributes.get("src", "")
+    if not image_src:
+        return None
+
+    return image_rule["converter"](image_src, image_attributes.get("alt", ""))
+
+
+def _find_embed_provider(url: str) -> dict[str, str | bool | None] | None:
     lower_url = url.lower()
 
-    for compare_text, provider_name_slug in VIDEO_EMBED_PROVIDERS.items():
+    for compare_text, provider_info in EMBED_PROVIDER_RULES.items():
         if compare_text in lower_url:
-            return provider_name_slug
+            return provider_info
 
     return None

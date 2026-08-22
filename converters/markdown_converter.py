@@ -3,11 +3,12 @@ from dictionaries.markdown_dict import (
     MARKDOWN_CODE_RULE,
     MARKDOWN_EMBED_RULE,
     MARKDOWN_HEADING_RULE,
+    MARKDOWN_IMAGE_RULE,
     MARKDOWN_LIST_RULES,
     MARKDOWN_QUOTE_RULE,
     MARKDOWN_SPACER_RULE,
 )
-from dictionaries.html_dict import VIDEO_EMBED_PROVIDERS
+from dictionaries.html_dict import EMBED_PROVIDER_RULES
 
 
 def convert_markdown_to_gutenberg(load_file: str) -> str:
@@ -75,15 +76,34 @@ def convert_markdown_to_gutenberg(load_file: str) -> str:
             blocks.append(MARKDOWN_SPACER_RULE["converter"](height))
             continue
 
-        provider_name_slug = _find_embed_provider(stripped_line)
-        if provider_name_slug and MARKDOWN_EMBED_RULE["pattern"].match(stripped_line):
+        image_match = MARKDOWN_IMAGE_RULE["pattern"].match(stripped_line)
+        if image_match:
             _flush_paragraph(blocks, paragraph_lines)
             paragraph_lines = []
             _flush_list(blocks, list_items, list_ordered)
             list_items = []
             _flush_quote(blocks, quote_lines)
             quote_lines = []
-            blocks.append(MARKDOWN_EMBED_RULE["converter"](stripped_line, provider_name_slug))
+            blocks.append(MARKDOWN_IMAGE_RULE["converter"](image_match.group(2), image_match.group(1)))
+            continue
+
+        provider_info = _find_embed_provider(stripped_line)
+        if provider_info and MARKDOWN_EMBED_RULE["pattern"].match(stripped_line):
+            _flush_paragraph(blocks, paragraph_lines)
+            paragraph_lines = []
+            _flush_list(blocks, list_items, list_ordered)
+            list_items = []
+            _flush_quote(blocks, quote_lines)
+            quote_lines = []
+            blocks.append(
+                MARKDOWN_EMBED_RULE["converter"](
+                    stripped_line,
+                    provider_info["providerNameSlug"],
+                    embed_type=provider_info["type"],
+                    responsive=provider_info["responsive"],
+                    aspect=provider_info["aspect"],
+                )
+            )
             continue
 
         quote_match = MARKDOWN_QUOTE_RULE["pattern"].match(line)
@@ -153,11 +173,11 @@ def _flush_quote(blocks: list[str], quote_lines: list[str]) -> None:
         blocks.append(MARKDOWN_QUOTE_RULE["converter"](" ".join(quote_lines)))
 
 
-def _find_embed_provider(url: str) -> str | None:
+def _find_embed_provider(url: str) -> dict[str, str | bool | None] | None:
     lower_url = url.lower()
 
-    for compare_text, provider_name_slug in VIDEO_EMBED_PROVIDERS.items():
+    for compare_text, provider_info in EMBED_PROVIDER_RULES.items():
         if compare_text in lower_url:
-            return provider_name_slug
+            return provider_info
 
     return None

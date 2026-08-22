@@ -24,13 +24,12 @@ dist/
 sample*.txt
 sample*.md
 sample*.html
-*_wordpress.html
-*_wordpress.md
-*_wordpress.txt
 sample.html
 sample.md
 sample.txt
-
+*output.txt
+*output.md
+*output.html
 # Logs
 *.log
 
