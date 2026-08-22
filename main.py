@@ -7,8 +7,8 @@
 #########################
 
 import argparse
-from pathlib import Path
 import tkinter as tk
+from pathlib import Path
 from tkinter import filedialog, messagebox
 
 from converters.html_converter import convert_html_to_gutenberg
@@ -17,7 +17,6 @@ from converters.text_converter import convert_text_to_gutenberg
 from dictionaries.html_dict import HTML_EXTENSIONS
 from dictionaries.markdown_dict import MARKDOWN_EXTENSIONS
 from dictionaries.text_dict import TEXT_EXTENSIONS
-
 
 SUPPORTED_FILE_TYPES = [
     ("対応ファイル", "*.txt *.md *.markdown *.html *.htm"),
@@ -60,6 +59,7 @@ def _select_converter(file_extension: str):
 
 
 def main() -> None:
+    """コマンドライン引数またはGUIからWordPress Gutenberg向けHTMLへ変換します。"""
     parser = argparse.ArgumentParser(
         description="平文、Markdown、HTMLをWordPress Gutenberg向けHTMLへ変換します。"
     )
