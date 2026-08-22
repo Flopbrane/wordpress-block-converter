@@ -4,6 +4,8 @@ from html import escape
 
 MARKDOWN_LINK_PATTERN = re.compile(r"\[([^\]]+)\]\((https?://[^\s)]+)\)")
 URL_PATTERN = re.compile(r"(?<![\"'=])\bhttps?://[^\s<]+")
+BOLD_PATTERN = re.compile(r"\*\*(.+?)\*\*")
+ITALIC_PATTERN = re.compile(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)")
 
 
 def format_inline_text(text: str, line_break_html: str = "<br>") -> str:
@@ -23,6 +25,7 @@ def format_inline_text(text: str, line_break_html: str = "<br>") -> str:
 
 def _escape_and_link_urls(text: str) -> str:
     safe_text = escape(text)
+    safe_text = _format_emphasis(safe_text)
     return URL_PATTERN.sub(lambda match: _create_link_html(match.group(0), match.group(0)), safe_text)
 
 
@@ -30,3 +33,8 @@ def _create_link_html(label: str, url: str) -> str:
     safe_label = escape(label.strip())
     safe_url = escape(url.strip(), quote=True)
     return f'<a href="{safe_url}">{safe_label}</a>'
+
+
+def _format_emphasis(text: str) -> str:
+    text = BOLD_PATTERN.sub(r"<strong>\1</strong>", text)
+    return ITALIC_PATTERN.sub(r"<em>\1</em>", text)

@@ -7,10 +7,12 @@ WordPressの記事下書きを作るときに、手作業でブロックコメ�
 ## できること
 
 - 平文 `.txt` を段落ブロックへ変換
-- Markdownの見出しと本文を変換
-- HTMLの見出し、段落、リストを変換
-- YouTubeのURLを埋め込みブロックへ変換
-- TikTokのURLを埋め込みブロックへ変換
+- Markdownの見出し、本文、リスト、引用、コード、表、区切り線、画像、ショートコードを変換
+- HTMLの見出し、段落、リスト、引用、コード、表、画像、リンク、ショートコードを変換
+- YouTube、YouTube Shorts、TikTok、VimeoなどのURLを埋め込みブロックへ変換
+- 画像・動画・音声・PDFなどの直接URLを、それぞれ適したブロックへ変換
+- リンク、太字、斜体などの基本的な本文装飾を保持
+- 平文の段落間に24pxの余白ブロックを挿入
 - GUIでload_fileとsave_fileを選択
 - コマンドラインからも実行可能
 - Python標準ライブラリのみで動作
@@ -29,11 +31,75 @@ WordPressの記事下書きを作るときに、手作業でブロックコメ�
 |---|---|
 | 段落 | `core/paragraph` |
 | 見出し | `core/heading` |
-| HTMLリスト・表 | `core/html` |
+| リスト | 基本は `core/html` |
 | コード | `core/code` |
 | 引用 | `core/quote` |
 | 余白 | `core/spacer` |
-| YouTube / TikTok埋め込み | `core/embed` |
+| 区切り線 | `core/separator` |
+| 表 | `core/table` |
+| カスタムHTML | `core/html` |
+| 画像 | `core/image` |
+| 動画ファイル | `core/video` |
+| 音声ファイル | `core/audio` |
+| ダウンロードファイル | `core/file` |
+| ショートコード | `core/shortcode` |
+| 外部サービスURL | `core/embed` |
+
+## 変換ルールの概要
+
+### 平文
+
+- 空行で段落を分けます。
+- 段落内の改行は `<br><br>` に変換します。
+- 段落と段落の間には24pxのspacerブロックを入れます。
+
+### Markdown
+
+対応している主な書き方です。
+
+- 見出し: `#` から `######`
+- 段落
+- 箇条書き: `-`, `*`, `+`
+- 番号付きリスト: `1.` または `1)`
+- コードブロック: 三連バッククォート
+- 引用: `> 引用文`
+- 表: `| 列 | 列 |`
+- 画像: `![代替テキスト](https://example.com/image.jpg)`
+- リンク: `[表示名](https://example.com/)`
+- 太字・斜体: `**太字**`, `*斜体*`
+- 区切り線: `---`, `***`, `___`
+- 余白指定: `[spacer]` または `[spacer:60]`
+- WordPressショートコード: `[shortcode ...]`
+- 単独行のURL
+
+### HTML
+
+対応している主なHTMLです。
+
+- `<p>`, `<h1>` から `<h6>`
+- `<ul>`, `<ol>`, `<li>`
+- `<blockquote>`
+- `<pre>`, `<code>`
+- `<table>`, `<tr>`, `<th>`, `<td>`
+- `<img>`
+- `<a>`
+- `<strong>`, `<b>`, `<em>`, `<i>`
+- `<hr>`
+
+`<b>` は `<strong>` に、`<i>` は `<em>` に寄せて出力します。
+
+### URLの分別
+
+単独行のURLは、種類によって変換先を分けます。
+
+| URLの種類 | 変換先 |
+|---|---|
+| YouTube / YouTube Shorts / TikTok / Vimeo / Instagram / X / Twitter / Dailymotion / Twitch / TED / Spotify / SoundCloud | `core/embed` |
+| `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.svg`, `.avif` | `core/image` |
+| `.mp4`, `.webm`, `.mov`, `.m4v` | `core/video` |
+| `.mp3`, `.wav`, `.ogg`, `.m4a` | `core/audio` |
+| `.pdf`, `.zip`, Officeファイル | `core/file` |
+| 本文中のその他URL | 通常のHTMLリンク |
 
 ## 必要環境
 
@@ -114,10 +180,16 @@ wp_converter/
 │  ├─ embed.py
 │  ├─ heading.py
 │  ├─ html_block.py
+│  ├─ image.py
+│  ├─ inline.py
 │  ├─ list_block.py
+│  ├─ media.py
 │  ├─ paragraph.py
 │  ├─ quote.py
-│  └─ spacer.py
+│  ├─ separator.py
+│  ├─ shortcode.py
+│  ├─ spacer.py
+│  └─ table.py
 └─ dictionaries/
    ├─ markdown_dict.py
    ├─ text_dict.py

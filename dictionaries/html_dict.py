@@ -1,3 +1,11 @@
+"""HTML変換用の辞書ファイルです"""
+#########################
+# Author: F.Kurokawa
+# Description:
+#
+#########################
+from __future__ import annotations
+
 import re
 
 from blocks.code import create_code_block
@@ -6,17 +14,18 @@ from blocks.heading import create_heading_block
 from blocks.html_block import create_html_block
 from blocks.image import create_image_block
 from blocks.list_block import create_list_block
+from blocks.media import create_audio_block, create_file_block, create_video_block
 from blocks.paragraph import create_paragraph_block
 from blocks.quote import create_quote_block
-from blocks.spacer import create_spacer_block
+from blocks.separator import create_separator_block
+from blocks.shortcode import create_shortcode_block
 from blocks.table import create_table_block
 
-
-HTML_EXTENSIONS = {".html", ".htm"}
+HTML_EXTENSIONS: set[str] = {".html", ".htm"}
 
 HTML_FORMAT_NAME = "html"
 
-WORDPRESS_CORE_BLOCKS = {
+WORDPRESS_CORE_BLOCKS: dict[str, str] = {
     "paragraph": "core/paragraph",
     "heading": "core/heading",
     "list": "core/list",
@@ -45,7 +54,7 @@ WORDPRESS_CORE_BLOCKS = {
     "embed": "core/embed",
 }
 
-PRIORITY_BLOCK_COMMENT_NAMES = {
+PRIORITY_BLOCK_COMMENT_NAMES: dict[str, str] = {
     "paragraph": "paragraph",
     "heading": "heading",
     "html": "html",
@@ -54,7 +63,7 @@ PRIORITY_BLOCK_COMMENT_NAMES = {
     "spacer": "spacer",
 }
 
-VIDEO_EMBED_PROVIDERS = {
+VIDEO_EMBED_PROVIDERS: dict[str, str] = {
     "youtube.com/shorts": "youtube",
     "youtube.com": "youtube",
     "youtu.be": "youtube",
@@ -72,7 +81,14 @@ VIDEO_EMBED_PROVIDERS = {
     "twitch.tv": "twitch",
 }
 
-EMBED_PROVIDER_RULES = {
+IMAGE_URL_EXTENSIONS: set[str] = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".avif"}
+VIDEO_FILE_EXTENSIONS: set[str] = {".mp4", ".webm", ".mov", ".m4v"}
+AUDIO_FILE_EXTENSIONS: set[str] = {".mp3", ".wav", ".ogg", ".m4a"}
+DOWNLOAD_FILE_EXTENSIONS: set[str] = {
+    ".pdf", ".zip", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx"
+    }
+
+EMBED_PROVIDER_RULES: dict[str, dict[str, str | bool | None]] = {
     "youtube.com/shorts": {
         "providerNameSlug": "youtube",
         "type": "video",
@@ -133,6 +149,24 @@ EMBED_PROVIDER_RULES = {
         "responsive": True,
         "aspect": "16-9",
     },
+    "wordpress.tv": {
+        "providerNameSlug": "wordpress-tv",
+        "type": "video",
+        "responsive": True,
+        "aspect": "16-9",
+    },
+    "videopress.com": {
+        "providerNameSlug": "videopress",
+        "type": "video",
+        "responsive": True,
+        "aspect": "16-9",
+    },
+    "facebook.com": {
+        "providerNameSlug": "facebook",
+        "type": "rich",
+        "responsive": True,
+        "aspect": None,
+    },
     "ted.com": {
         "providerNameSlug": "ted",
         "type": "video",
@@ -153,7 +187,7 @@ EMBED_PROVIDER_RULES = {
     },
 }
 
-ALLOWED_HTML_TAGS = {
+ALLOWED_HTML_TAGS: set[str] = {
     "p",
     "h1",
     "h2",
@@ -176,39 +210,85 @@ ALLOWED_HTML_TAGS = {
     "hr",
     "img",
     "a",
+    "strong",
+    "b",
+    "em",
+    "i",
 }
 
 # 今後使用
-FUTURE_ALLOWED_HTML_TAGS = {
+FUTURE_ALLOWED_HTML_TAGS: set[str] = {
     "image",
     "audio",
     "video",
     "file",
 }
 
-HTML_PARAGRAPH_PATTERN = re.compile(r"<p\b[^>]*>(.*?)</p>", re.IGNORECASE | re.DOTALL)
-HTML_HEADING_PATTERN = re.compile(r"<h([1-6])\b[^>]*>(.*?)</h\1>", re.IGNORECASE | re.DOTALL)
-HTML_UNORDERED_LIST_PATTERN = re.compile(r"<ul\b[^>]*>(.*?)</ul>", re.IGNORECASE | re.DOTALL)
-HTML_ORDERED_LIST_PATTERN = re.compile(r"<ol\b[^>]*>(.*?)</ol>", re.IGNORECASE | re.DOTALL)
-HTML_LIST_ITEM_PATTERN = re.compile(r"<li\b[^>]*>(.*?)</li>", re.IGNORECASE | re.DOTALL)
-HTML_QUOTE_PATTERN = re.compile(r"<blockquote\b[^>]*>(.*?)</blockquote>", re.IGNORECASE | re.DOTALL)
-HTML_LINK_PATTERN = re.compile(
+HTML_PARAGRAPH_PATTERN: re.Pattern[str] = re.compile(
+    r"<p\b[^>]*>(.*?)</p>", re.IGNORECASE | re.DOTALL
+    )
+HTML_HEADING_PATTERN: re.Pattern[str] = re.compile(
+    r"<h([1-6])\b[^>]*>(.*?)</h\1>", re.IGNORECASE | re.DOTALL
+    )
+HTML_UNORDERED_LIST_PATTERN: re.Pattern[str] = re.compile(
+    r"<ul\b[^>]*>(.*?)</ul>", re.IGNORECASE | re.DOTALL
+)
+HTML_ORDERED_LIST_PATTERN: re.Pattern[str] = re.compile(
+    r"<ol\b[^>]*>(.*?)</ol>", re.IGNORECASE | re.DOTALL
+)
+HTML_LIST_ITEM_PATTERN: re.Pattern[str] = re.compile(
+    r"<li\b[^>]*>(.*?)</li>", re.IGNORECASE | re.DOTALL
+)
+HTML_QUOTE_PATTERN: re.Pattern[str] = re.compile(
+    r"<blockquote\b[^>]*>(.*?)</blockquote>", re.IGNORECASE | re.DOTALL
+)
+HTML_LINK_PATTERN: re.Pattern[str] = re.compile(
     r"<a\b[^>]*href\s*=\s*['\"]([^'\"]+)['\"][^>]*>(.*?)</a>",
     re.IGNORECASE | re.DOTALL,
 )
-HTML_CODE_PATTERN = re.compile(
+HTML_STRONG_PATTERN: re.Pattern[str] = re.compile(
+    r"<(strong|b)\b[^>]*>(.*?)</\1>", re.IGNORECASE | re.DOTALL
+)
+HTML_EMPHASIS_PATTERN: re.Pattern[str] = re.compile(
+    r"<(em|i)\b[^>]*>(.*?)</\1>", re.IGNORECASE | re.DOTALL
+)
+HTML_CODE_PATTERN: re.Pattern[str] = re.compile(
     r"<pre\b[^>]*>(.*?)</pre>|<code\b[^>]*>(.*?)</code>",
     re.IGNORECASE | re.DOTALL,
 )
-HTML_TABLE_PATTERN = re.compile(r"<table\b[^>]*>.*?</table>", re.IGNORECASE | re.DOTALL)
-HTML_IMAGE_PATTERN = re.compile(r"<img\b[^>]*>", re.IGNORECASE | re.DOTALL)
-HTML_ATTRIBUTE_PATTERN = re.compile(r'([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*["\']([^"\']*)["\']')
-HTML_SPACER_PATTERN = re.compile(r"<hr\b[^>]*>", re.IGNORECASE)
-EMBED_URL_PATTERN = re.compile(r"^https?://[^\s<]+$", re.IGNORECASE)
-HTML_BR_PATTERN = re.compile(r"<br\s*/?>", re.IGNORECASE)
-HTML_TAG_PATTERN = re.compile(r"<[^>]+>")
+HTML_TABLE_PATTERN: re.Pattern[str] = re.compile(
+    r"<table\b[^>]*>.*?</table>", re.IGNORECASE | re.DOTALL
+)
+HTML_IMAGE_PATTERN: re.Pattern[str] = re.compile(r"<img\b[^>]*>", re.IGNORECASE | re.DOTALL)
+HTML_ATTRIBUTE_PATTERN: re.Pattern[str] = re.compile(
+    r'([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*["\']([^"\']*)["\']'
+)
+HTML_SPACER_PATTERN: re.Pattern[str] = re.compile(r"<hr\b[^>]*>", re.IGNORECASE)
+HTML_SHORTCODE_PATTERN: re.Pattern[str] = re.compile(r"^\s*\[[A-Za-z0-9_-]+(?:\s+[^\]]*)?\]\s*$")
+EMBED_URL_PATTERN: re.Pattern[str] = re.compile(r"^https?://[^\s<]+$", re.IGNORECASE)
+HTML_BR_PATTERN: re.Pattern[str] = re.compile(r"<br\s*/?>", re.IGNORECASE)
+HTML_TAG_PATTERN: re.Pattern[str] = re.compile(r"<[^>]+>")
 
-HTML_BLOCK_RULES = {
+DIRECT_URL_RULES: dict[str, dict[str, object]] = {
+    "image": {
+        "extensions": IMAGE_URL_EXTENSIONS,
+        "converter": create_image_block,
+    },
+    "video": {
+        "extensions": VIDEO_FILE_EXTENSIONS,
+        "converter": create_video_block,
+    },
+    "audio": {
+        "extensions": AUDIO_FILE_EXTENSIONS,
+        "converter": create_audio_block,
+    },
+    "file": {
+        "extensions": DOWNLOAD_FILE_EXTENSIONS,
+        "converter": create_file_block,
+    },
+}
+
+HTML_BLOCK_RULES: dict[str, dict[str, object]] = {
     "paragraph": {
         "name": "paragraph",
         "pattern": HTML_PARAGRAPH_PATTERN,
@@ -255,14 +335,19 @@ HTML_BLOCK_RULES = {
         "converter": create_image_block,
     },
     "spacer": {
-        "name": "spacer",
+        "name": "separator",
         "pattern": HTML_SPACER_PATTERN,
-        "converter": create_spacer_block,
-        "height": 40,
+        "converter": create_separator_block,
     },
 }
 
-HTML_EMBED_RULE = {
+HTML_SHORTCODE_RULE: dict[str, object] = {
+    "name": "shortcode",
+    "pattern": HTML_SHORTCODE_PATTERN,
+    "converter": create_shortcode_block,
+}
+
+HTML_EMBED_RULE: dict[str, object] = {
     "name": "embed",
     "pattern": EMBED_URL_PATTERN,
     "converter": create_embed_block,

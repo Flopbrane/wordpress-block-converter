@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """メインの駆動ファイルです"""
 #########################
 # Author: F.Kurokawa
@@ -10,6 +9,7 @@ import argparse
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox
+from typing import Callable
 
 from converters.html_converter import convert_html_to_gutenberg
 from converters.markdown_converter import convert_markdown_to_gutenberg
@@ -18,7 +18,7 @@ from dictionaries.html_dict import HTML_EXTENSIONS
 from dictionaries.markdown_dict import MARKDOWN_EXTENSIONS
 from dictionaries.text_dict import TEXT_EXTENSIONS
 
-SUPPORTED_FILE_TYPES = [
+SUPPORTED_FILE_TYPES: list[tuple[str, str]] = [
     ("対応ファイル", "*.txt *.md *.markdown *.html *.htm"),
     ("テキスト", "*.txt"),
     ("Markdown", "*.md *.markdown"),
@@ -35,15 +35,15 @@ def convert_file(load_file_path: str | Path, save_file_path: str | Path) -> None
     if not load_file_path.exists():
         raise FileNotFoundError(f"読み込みファイルが見つかりません: {load_file_path}")
 
-    load_file = load_file_path.read_text(encoding="utf-8-sig")
-    converter = _select_converter(load_file_path.suffix.lower())
-    save_file = converter(load_file)
+    load_file: str = load_file_path.read_text(encoding="utf-8-sig")
+    converter: Callable[..., str] = _select_converter(load_file_path.suffix.lower())
+    save_file: str = converter(load_file)
 
     save_file_path.parent.mkdir(parents=True, exist_ok=True)
     save_file_path.write_text(save_file, encoding="utf-8")
 
 
-def _select_converter(file_extension: str):
+def _select_converter(file_extension: str) -> Callable[..., str]:
     if file_extension in TEXT_EXTENSIONS:
         return convert_text_to_gutenberg
     if file_extension in MARKDOWN_EXTENSIONS:
@@ -51,7 +51,11 @@ def _select_converter(file_extension: str):
     if file_extension in HTML_EXTENSIONS:
         return convert_html_to_gutenberg
 
-    supported_extensions = sorted(TEXT_EXTENSIONS | MARKDOWN_EXTENSIONS | HTML_EXTENSIONS)
+    supported_extensions: list[str] = sorted(
+        TEXT_EXTENSIONS |
+        MARKDOWN_EXTENSIONS |
+        HTML_EXTENSIONS
+        )
     raise ValueError(
         "対応していないファイル形式です。"
         f"対応拡張子: {', '.join(supported_extensions)}"
@@ -66,7 +70,7 @@ def main() -> None:
     parser.add_argument("load_file_path", nargs="?", help="変換したいファイルのパス")
     parser.add_argument("save_file_path", nargs="?", help="変換後HTMLを保存するパス")
     parser.add_argument("--gui", action="store_true", help="ファイル選択画面で変換します")
-    args = parser.parse_args()
+    args: argparse.Namespace = parser.parse_args()
 
     if args.gui or not args.load_file_path or not args.save_file_path:
         run_gui()
@@ -81,7 +85,7 @@ def run_gui() -> None:
     root = tk.Tk()
     root.withdraw()
 
-    load_file_path = filedialog.askopenfilename(
+    load_file_path: str = filedialog.askopenfilename(
         title="変換したいファイルを選んでください",
         filetypes=SUPPORTED_FILE_TYPES,
     )
@@ -89,8 +93,8 @@ def run_gui() -> None:
         messagebox.showinfo("キャンセル", "変換をキャンセルしました。")
         return
 
-    default_save_file_path = _create_default_save_file_path(load_file_path)
-    save_file_path = filedialog.asksaveasfilename(
+    default_save_file_path: Path = _create_default_save_file_path(load_file_path)
+    save_file_path: str = filedialog.asksaveasfilename(
         title="変換後HTMLの保存先を選んでください",
         defaultextension=".html",
         initialfile=default_save_file_path.name,
@@ -103,7 +107,7 @@ def run_gui() -> None:
 
     try:
         convert_file(load_file_path, save_file_path)
-    except Exception as error:
+    except (ValueError, TypeError, PermissionError) as error:
         messagebox.showerror("変換エラー", str(error))
         return
 

@@ -1,5 +1,7 @@
 import re
-from html import escape, unescape
+from html import unescape
+
+from blocks.inline import format_inline_text
 
 
 ROW_PATTERN = re.compile(r"<tr\b[^>]*>(.*?)</tr>", re.IGNORECASE | re.DOTALL)
@@ -14,6 +16,26 @@ def create_table_block(table_html: str) -> str:
     if not rows:
         return f"<!-- wp:html -->\n{table_html.strip()}\n<!-- /wp:html -->"
 
+    return _create_table_block_from_row_data(rows)
+
+
+def create_table_block_from_rows(headers: list[str], rows: list[list[str]]) -> str:
+    """Markdown表の行データをWordPress Gutenbergのtableブロックに変換します。"""
+    table_rows = []
+
+    if headers:
+        table_rows.append([{"tag": "th", "text": header.strip()} for header in headers])
+
+    for row in rows:
+        table_rows.append([{"tag": "td", "text": cell.strip()} for cell in row])
+
+    if not table_rows:
+        return ""
+
+    return _create_table_block_from_row_data(table_rows)
+
+
+def _create_table_block_from_row_data(rows: list[list[dict[str, str]]]) -> str:
     header_rows = []
     body_rows = rows
 
@@ -56,7 +78,7 @@ def _extract_rows(table_html: str) -> list[list[dict[str, str]]]:
 
 def _create_row_html(row: list[dict[str, str]]) -> str:
     cells = "".join(
-        f"<{cell['tag']}>{escape(cell['text'])}</{cell['tag']}>"
+        f"<{cell['tag']}>{format_inline_text(cell['text'])}</{cell['tag']}>"
         for cell in row
     )
     return f"<tr>{cells}</tr>"
