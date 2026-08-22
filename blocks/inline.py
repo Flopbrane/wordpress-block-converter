@@ -1,11 +1,19 @@
+"""インラインテキストをWordPress Gutenberg向けHTMLに変換するモジュールです。"""
+#########################
+# Author: F.Kurokawa
+# Description:
+#
+#########################
+from __future__ import annotations
+
 import re
 from html import escape
+from typing import LiteralString
 
-
-MARKDOWN_LINK_PATTERN = re.compile(r"\[([^\]]+)\]\((https?://[^\s)]+)\)")
-URL_PATTERN = re.compile(r"(?<![\"'=])\bhttps?://[^\s<]+")
-BOLD_PATTERN = re.compile(r"\*\*(.+?)\*\*")
-ITALIC_PATTERN = re.compile(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)")
+MARKDOWN_LINK_PATTERN: re.Pattern[str] = re.compile(r"\[([^\]]+)\]\((https?://[^\s)]+)\)")
+URL_PATTERN: re.Pattern[str] = re.compile(r"(?<![\"'=])\bhttps?://[^\s<]+")
+BOLD_PATTERN: re.Pattern[str] = re.compile(r"\*\*(.+?)\*\*")
+ITALIC_PATTERN: re.Pattern[str] = re.compile(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)")
 
 
 def format_inline_text(text: str, line_break_html: str = "<br>") -> str:
@@ -19,19 +27,21 @@ def format_inline_text(text: str, line_break_html: str = "<br>") -> str:
         current_position = link_match.end()
 
     parts.append(_escape_and_link_urls(text[current_position:]))
-    safe_text = "".join(parts)
+    safe_text: LiteralString = "".join(parts)
     return line_break_html.join(safe_text.splitlines())
 
 
 def _escape_and_link_urls(text: str) -> str:
-    safe_text = escape(text)
+    safe_text: str = escape(text)
     safe_text = _format_emphasis(safe_text)
-    return URL_PATTERN.sub(lambda match: _create_link_html(match.group(0), match.group(0)), safe_text)
+    return URL_PATTERN.sub(
+        lambda match: _create_link_html(match.group(0), match.group(0)), safe_text
+        )
 
 
 def _create_link_html(label: str, url: str) -> str:
-    safe_label = escape(label.strip())
-    safe_url = escape(url.strip(), quote=True)
+    safe_label: str = escape(label.strip())
+    safe_url: str = escape(url.strip(), quote=True)
     return f'<a href="{safe_url}">{safe_label}</a>'
 
 

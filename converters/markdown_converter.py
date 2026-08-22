@@ -1,4 +1,17 @@
+"""markdownをwpに変換します"""
+#########################
+# Author: F.Kurokawa
+# Description:
+#
+#########################
+from __future__ import annotations
+
+import re
+from collections.abc import Callable
+from typing import Any, cast
+
 from blocks.paragraph import create_paragraph_block
+from dictionaries.html_dict import DIRECT_URL_RULES, EMBED_PROVIDER_RULES
 from dictionaries.markdown_dict import (
     MARKDOWN_CODE_RULE,
     MARKDOWN_EMBED_RULE,
@@ -11,26 +24,30 @@ from dictionaries.markdown_dict import (
     MARKDOWN_SPACER_RULE,
     MARKDOWN_TABLE_RULE,
 )
-from dictionaries.html_dict import DIRECT_URL_RULES, EMBED_PROVIDER_RULES
 
 
 def convert_markdown_to_gutenberg(load_file: str) -> str:
     """MarkdownをWordPress Gutenberg向けHTMLに変換します。"""
-    blocks = []
-    paragraph_lines = []
-    list_items = []
-    list_ordered = False
-    quote_lines = []
-    table_lines = []
-    code_lines = []
-    in_code_block = False
+    blocks: list[str] = []
+    paragraph_lines: list[str] = []
+    list_items: list[str] = []
+    list_ordered: bool = False
+    quote_lines: list[str] = []
+    table_lines: list[str] = []
+    code_lines: list[str] = []
+    in_code_block: bool = False
 
     for line in load_file.splitlines():
-        stripped_line = line.strip()
+        stripped_line: str = line.strip()
 
-        if stripped_line.startswith(MARKDOWN_CODE_RULE["fence"]):
+        code_fence: str = str(MARKDOWN_CODE_RULE["fence"])
+        if stripped_line.startswith(code_fence):
             if in_code_block:
-                blocks.append(MARKDOWN_CODE_RULE["converter"]("\n".join(code_lines)))
+                code_converter: Callable[[str], str] = cast(
+                    Callable[[str], str],
+                    MARKDOWN_CODE_RULE["converter"]
+                    )
+                blocks.append(code_converter("\n".join(code_lines)))
                 code_lines = []
                 in_code_block = False
             else:
@@ -60,7 +77,8 @@ def convert_markdown_to_gutenberg(load_file: str) -> str:
             table_lines = []
             continue
 
-        if MARKDOWN_TABLE_RULE["row_pattern"].match(stripped_line):
+        table_row_pattern = cast(re.Pattern[str], MARKDOWN_TABLE_RULE["row_pattern"])
+        if table_row_pattern.match(stripped_line):
             _flush_paragraph(blocks, paragraph_lines)
             paragraph_lines = []
             _flush_list(blocks, list_items, list_ordered)
@@ -70,7 +88,8 @@ def convert_markdown_to_gutenberg(load_file: str) -> str:
             table_lines.append(stripped_line)
             continue
 
-        heading_match = MARKDOWN_HEADING_RULE["pattern"].match(stripped_line)
+        heading_pattern: re.Pattern[str] = cast(re.Pattern[str], MARKDOWN_HEADING_RULE["pattern"])
+        heading_match: re.Match[str] | None = heading_pattern.match(stripped_line)
         if heading_match:
             _flush_paragraph(blocks, paragraph_lines)
             paragraph_lines = []
@@ -81,10 +100,12 @@ def convert_markdown_to_gutenberg(load_file: str) -> str:
             _flush_table(blocks, table_lines, paragraph_lines)
             table_lines = []
             level = len(heading_match.group(1))
-            blocks.append(MARKDOWN_HEADING_RULE["converter"](heading_match.group(2), level))
+            heading_converter = cast(Callable[[str, int], str], MARKDOWN_HEADING_RULE["converter"])
+            blocks.append(heading_converter(heading_match.group(2), level))
             continue
 
-        spacer_match = MARKDOWN_SPACER_RULE["pattern"].match(stripped_line)
+        spacer_pattern: re.Pattern[str] = cast(re.Pattern[str], MARKDOWN_SPACER_RULE["pattern"])
+        spacer_match: re.Match[str] | None = spacer_pattern.match(stripped_line)
         if spacer_match:
             _flush_paragraph(blocks, paragraph_lines)
             paragraph_lines = []
@@ -94,11 +115,14 @@ def convert_markdown_to_gutenberg(load_file: str) -> str:
             quote_lines = []
             _flush_table(blocks, table_lines, paragraph_lines)
             table_lines = []
-            height = int(spacer_match.group(1) or MARKDOWN_SPACER_RULE["default_height"])
-            blocks.append(MARKDOWN_SPACER_RULE["converter"](height))
+            default_height: int = cast(int, MARKDOWN_SPACER_RULE["default_height"])
+            height = int(spacer_match.group(1) or default_height)
+            spacer_converter = cast(Callable[[int], str], MARKDOWN_SPACER_RULE["converter"])
+            blocks.append(spacer_converter(height))
             continue
 
-        if MARKDOWN_SEPARATOR_RULE["pattern"].match(stripped_line):
+        separator_pattern= cast(re.Pattern[str], MARKDOWN_SEPARATOR_RULE["pattern"])
+        if separator_pattern.match(stripped_line):
             _flush_paragraph(blocks, paragraph_lines)
             paragraph_lines = []
             _flush_list(blocks, list_items, list_ordered)
@@ -107,10 +131,12 @@ def convert_markdown_to_gutenberg(load_file: str) -> str:
             quote_lines = []
             _flush_table(blocks, table_lines, paragraph_lines)
             table_lines = []
-            blocks.append(MARKDOWN_SEPARATOR_RULE["converter"]())
+            separator_converter = cast(Callable[[], str], MARKDOWN_SEPARATOR_RULE["converter"])
+            blocks.append(separator_converter())
             continue
 
-        if MARKDOWN_SHORTCODE_RULE["pattern"].match(stripped_line):
+        shortcode_pattern = cast(re.Pattern[str], MARKDOWN_SHORTCODE_RULE["pattern"])
+        if shortcode_pattern.match(stripped_line):
             _flush_paragraph(blocks, paragraph_lines)
             paragraph_lines = []
             _flush_list(blocks, list_items, list_ordered)
@@ -119,10 +145,12 @@ def convert_markdown_to_gutenberg(load_file: str) -> str:
             quote_lines = []
             _flush_table(blocks, table_lines, paragraph_lines)
             table_lines = []
-            blocks.append(MARKDOWN_SHORTCODE_RULE["converter"](stripped_line))
+            shortcode_converter = cast(Callable[[str], str], MARKDOWN_SHORTCODE_RULE["converter"])
+            blocks.append(shortcode_converter(stripped_line))
             continue
 
-        image_match = MARKDOWN_IMAGE_RULE["pattern"].match(stripped_line)
+        image_pattern = cast(re.Pattern[str], MARKDOWN_IMAGE_RULE["pattern"])
+        image_match = image_pattern.match(stripped_line)
         if image_match:
             _flush_paragraph(blocks, paragraph_lines)
             paragraph_lines = []
@@ -132,11 +160,13 @@ def convert_markdown_to_gutenberg(load_file: str) -> str:
             quote_lines = []
             _flush_table(blocks, table_lines, paragraph_lines)
             table_lines = []
-            blocks.append(MARKDOWN_IMAGE_RULE["converter"](image_match.group(2), image_match.group(1)))
+            image_converter = cast(Callable[[str, str], str], MARKDOWN_IMAGE_RULE["converter"])
+            blocks.append(image_converter(image_match.group(2), image_match.group(1)))
             continue
 
-        provider_info = _find_embed_provider(stripped_line)
-        if provider_info and MARKDOWN_EMBED_RULE["pattern"].match(stripped_line):
+        provider_info: dict[str, str | bool | None] | None = _find_embed_provider(stripped_line)
+        embed_pattern = cast(re.Pattern[str], MARKDOWN_EMBED_RULE["pattern"])
+        if provider_info and embed_pattern.match(stripped_line):
             _flush_paragraph(blocks, paragraph_lines)
             paragraph_lines = []
             _flush_list(blocks, list_items, list_ordered)
@@ -145,8 +175,11 @@ def convert_markdown_to_gutenberg(load_file: str) -> str:
             quote_lines = []
             _flush_table(blocks, table_lines, paragraph_lines)
             table_lines = []
+            embed_converter: Callable[..., str] = cast(
+                Callable[..., str], MARKDOWN_EMBED_RULE["converter"]
+            )
             blocks.append(
-                MARKDOWN_EMBED_RULE["converter"](
+                embed_converter(
                     stripped_line,
                     provider_info["providerNameSlug"],
                     embed_type=provider_info["type"],
@@ -156,8 +189,8 @@ def convert_markdown_to_gutenberg(load_file: str) -> str:
             )
             continue
 
-        direct_url_block = _create_direct_url_block(stripped_line)
-        if direct_url_block and MARKDOWN_EMBED_RULE["pattern"].match(stripped_line):
+        direct_url_block: str | None = _create_direct_url_block(stripped_line)
+        if direct_url_block and embed_pattern.match(stripped_line):
             _flush_paragraph(blocks, paragraph_lines)
             paragraph_lines = []
             _flush_list(blocks, list_items, list_ordered)
@@ -169,7 +202,8 @@ def convert_markdown_to_gutenberg(load_file: str) -> str:
             blocks.append(direct_url_block)
             continue
 
-        quote_match = MARKDOWN_QUOTE_RULE["pattern"].match(line)
+        quote_pattern: re.Pattern[str] = cast("re.Pattern[str]", MARKDOWN_QUOTE_RULE["pattern"])
+        quote_match: re.Match[str] | None = quote_pattern.match(line)
         if quote_match:
             _flush_paragraph(blocks, paragraph_lines)
             paragraph_lines = []
@@ -182,11 +216,17 @@ def convert_markdown_to_gutenberg(load_file: str) -> str:
 
         unordered_rule = MARKDOWN_LIST_RULES["unordered"]
         ordered_rule = MARKDOWN_LIST_RULES["ordered"]
-        unordered_match = unordered_rule["pattern"].match(line)
-        ordered_match = ordered_rule["pattern"].match(line)
+        unordered_pattern: re.Pattern[str] = cast("re.Pattern[str]", unordered_rule["pattern"])
+        ordered_pattern: re.Pattern[str] = cast("re.Pattern[str]", ordered_rule["pattern"])
+        unordered_match: re.Match[str] | None = unordered_pattern.match(line)
+        ordered_match: re.Match[str] | None = ordered_pattern.match(line)
         if unordered_match or ordered_match:
-            current_ordered = ordered_match is not None
-            item_text = ordered_match.group(1) if ordered_match else unordered_match.group(1)
+            current_ordered: bool = ordered_match is not None
+            if ordered_match is not None:
+                item_text: str | Any = ordered_match.group(1)
+            else:
+                assert unordered_match is not None
+                item_text = unordered_match.group(1)
 
             _flush_paragraph(blocks, paragraph_lines)
             paragraph_lines = []
@@ -211,7 +251,11 @@ def convert_markdown_to_gutenberg(load_file: str) -> str:
         paragraph_lines.append(stripped_line)
 
     if in_code_block:
-        blocks.append(MARKDOWN_CODE_RULE["converter"]("\n".join(code_lines)))
+        code_converter: Callable[[str], str] = cast(
+            Callable[[str], str],
+            MARKDOWN_CODE_RULE["converter"],
+        )
+        blocks.append(code_converter("\n".join(code_lines)))
 
     _flush_table(blocks, table_lines, paragraph_lines)
     _flush_paragraph(blocks, paragraph_lines)
@@ -228,33 +272,45 @@ def _flush_paragraph(blocks: list[str], paragraph_lines: list[str]) -> None:
 
 def _flush_list(blocks: list[str], list_items: list[str], ordered: bool) -> None:
     if list_items:
-        list_rule = MARKDOWN_LIST_RULES["ordered"] if ordered else MARKDOWN_LIST_RULES["unordered"]
+        list_rule: dict[str, str | re.Pattern[str] | Callable[..., object] | bool] = (
+            MARKDOWN_LIST_RULES["ordered"]
+            if ordered else MARKDOWN_LIST_RULES["unordered"]
+        )
+        list_converter: Callable[..., str] = cast(Callable[..., str], list_rule["converter"])
+        list_ordered: bool = cast(bool, list_rule["ordered"])
+        use_html_block: bool = cast(bool, list_rule["use_html_block"])
         blocks.append(
-            list_rule["converter"](
+            list_converter(
                 list_items,
-                ordered=list_rule["ordered"],
-                use_html_block=list_rule["use_html_block"],
+                ordered=list_ordered,
+                use_html_block=use_html_block,
             )
         )
 
 
 def _flush_quote(blocks: list[str], quote_lines: list[str]) -> None:
     if quote_lines:
-        blocks.append(MARKDOWN_QUOTE_RULE["converter"](" ".join(quote_lines)))
+        quote_converter = cast(Callable[[str], str], MARKDOWN_QUOTE_RULE["converter"])
+        blocks.append(quote_converter(" ".join(quote_lines)))
 
 
 def _flush_table(blocks: list[str], table_lines: list[str], paragraph_lines: list[str]) -> None:
     if not table_lines:
         return
 
-    if len(table_lines) < 2 or not MARKDOWN_TABLE_RULE["separator_pattern"].match(table_lines[1]):
+    separator_pattern = cast(re.Pattern[str], MARKDOWN_TABLE_RULE["separator_pattern"])
+    if len(table_lines) < 2 or not separator_pattern.match(table_lines[1]):
         paragraph_lines.extend(table_lines)
         table_lines.clear()
         return
 
     headers = _split_table_row(table_lines[0])
     rows = [_split_table_row(row) for row in table_lines[2:]]
-    blocks.append(MARKDOWN_TABLE_RULE["converter"](headers, rows))
+    table_converter = cast(
+        Callable[[list[str], list[list[str]]], str],
+        MARKDOWN_TABLE_RULE["converter"]
+        )
+    blocks.append(table_converter(headers, rows))
     table_lines.clear()
 
 
@@ -276,7 +332,9 @@ def _create_direct_url_block(url: str) -> str | None:
     lower_url = url.lower().split("?", 1)[0].split("#", 1)[0]
 
     for rule in DIRECT_URL_RULES.values():
-        if any(lower_url.endswith(file_extension) for file_extension in rule["extensions"]):
-            return rule["converter"](url)
+        extensions = cast(list[str], rule["extensions"])
+        if any(lower_url.endswith(file_extension) for file_extension in extensions):
+            direct_url_converter = cast(Callable[[str], str], rule["converter"])
+            return direct_url_converter(url)
 
     return None

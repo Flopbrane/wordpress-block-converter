@@ -1,17 +1,24 @@
+"""HTML表をWordPress Gutenberg向けHTMLに変換するモジュールです。"""
+#########################
+# Author: F.Kurokawa
+# Description:
+#
+#########################
+from __future__ import annotations
+
 import re
 from html import unescape
 
 from blocks.inline import format_inline_text
 
-
-ROW_PATTERN = re.compile(r"<tr\b[^>]*>(.*?)</tr>", re.IGNORECASE | re.DOTALL)
-CELL_PATTERN = re.compile(r"<(td|th)\b[^>]*>(.*?)</\1>", re.IGNORECASE | re.DOTALL)
-TAG_PATTERN = re.compile(r"<[^>]+>")
+ROW_PATTERN: re.Pattern[str] = re.compile(r"<tr\b[^>]*>(.*?)</tr>", re.IGNORECASE | re.DOTALL)
+CELL_PATTERN: re.Pattern[str] = re.compile(r"<(td|th)\b[^>]*>(.*?)</\1>", re.IGNORECASE | re.DOTALL)
+TAG_PATTERN: re.Pattern[str] = re.compile(r"<[^>]+>")
 
 
 def create_table_block(table_html: str) -> str:
     """単純なHTML表をWordPress Gutenbergのtableブロックに変換します。"""
-    rows = _extract_rows(table_html)
+    rows: list[list[dict[str, str]]] = _extract_rows(table_html)
 
     if not rows:
         return f"<!-- wp:html -->\n{table_html.strip()}\n<!-- /wp:html -->"
@@ -21,7 +28,7 @@ def create_table_block(table_html: str) -> str:
 
 def create_table_block_from_rows(headers: list[str], rows: list[list[str]]) -> str:
     """Markdown表の行データをWordPress Gutenbergのtableブロックに変換します。"""
-    table_rows = []
+    table_rows: list[list[dict[str, str]]] = []
 
     if headers:
         table_rows.append([{"tag": "th", "text": header.strip()} for header in headers])
@@ -36,18 +43,22 @@ def create_table_block_from_rows(headers: list[str], rows: list[list[str]]) -> s
 
 
 def _create_table_block_from_row_data(rows: list[list[dict[str, str]]]) -> str:
-    header_rows = []
-    body_rows = rows
+    header_rows: list[list[dict[str, str]]] = []
+    body_rows: list[list[dict[str, str]]] = rows
 
     if rows and all(cell["tag"] == "th" for cell in rows[0]):
         header_rows = [rows[0]]
         body_rows = rows[1:]
 
-    header_html = ""
+    header_html: str = ""
     if header_rows:
-        header_html = "<thead>\n" + "\n".join(_create_row_html(row) for row in header_rows) + "\n</thead>\n"
+        header_html = (
+            "<thead>\n" 
+            + "\n".join(_create_row_html(row) for row in header_rows)
+            + "\n</thead>\n"
+        )
 
-    body_html = "\n".join(_create_row_html(row) for row in body_rows)
+    body_html: str = "\n".join(_create_row_html(row) for row in body_rows)
     return (
         "<!-- wp:table -->\n"
         "<figure class=\"wp-block-table\"><table>\n"

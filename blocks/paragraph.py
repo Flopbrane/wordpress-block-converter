@@ -1,3 +1,11 @@
+"""段落をWordPress Gutenberg向けHTMLに変換するモジュールです。"""
+#########################
+# Author: F.Kurokawa
+# Description:
+#
+#########################
+from __future__ import annotations
+
 from blocks.inline import format_inline_text
 
 

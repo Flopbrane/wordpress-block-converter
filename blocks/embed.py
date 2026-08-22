@@ -1,3 +1,11 @@
+"""外部URLをWordPress Gutenberg向けHTMLに変換するモジュールです。"""
+#########################
+# Author: F.Kurokawa
+# Description:
+#
+#########################
+from __future__ import annotations
+
 import json
 from html import escape
 

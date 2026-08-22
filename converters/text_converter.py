@@ -1,3 +1,13 @@
+"""平文をWordPress Gutenberg向けHTMLに変換するモジュールです。"""
+#########################
+# Author: F.Kurokawa
+# Description:
+#
+#########################
+from __future__ import annotations
+
+from typing import Any
+
 from blocks.paragraph import create_paragraph_block
 from blocks.spacer import create_spacer_block
 from dictionaries.text_dict import (
@@ -9,13 +19,13 @@ from dictionaries.text_dict import (
 
 def convert_text_to_gutenberg(load_file: str) -> str:
     """平文をWordPress Gutenberg向けHTMLに変換します。"""
-    normalized_load_file = load_file.replace("\r\n", "\n").replace("\r", "\n")
-    paragraphs = [
+    normalized_load_file: str = load_file.replace("\r\n", "\n").replace("\r", "\n")
+    paragraphs: list[str | Any] = [
         paragraph.strip()
         for paragraph in TEXT_PARAGRAPH_SEPARATOR_PATTERN.split(normalized_load_file)
     ]
-    blocks = []
-    clean_paragraphs = [paragraph for paragraph in paragraphs if paragraph.strip()]
+    blocks: list[str] = []
+    clean_paragraphs: list[str | Any] = [paragraph for paragraph in paragraphs if paragraph.strip()]
 
     for paragraph_index, paragraph in enumerate(clean_paragraphs):
         if paragraph_index > 0:
