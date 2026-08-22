@@ -1,6 +1,11 @@
+import re
+
+
 TEXT_EXTENSIONS = {".txt"}
 
 TEXT_FORMAT_NAME = "plain_text"
 
 TEXT_PARAGRAPH_SEPARATOR = "\n\n"
+TEXT_PARAGRAPH_SEPARATOR_PATTERN = re.compile(r"\n[ \t]*\n+")
 TEXT_LINE_BREAK_HTML = "<br><br>"
+TEXT_PARAGRAPH_SPACER_HEIGHT = 24
