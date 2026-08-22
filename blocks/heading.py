@@ -1,0 +1,16 @@
+from html import escape
+
+
+def create_heading_block(text: str, level: int = 2) -> str:
+    """見出しをWordPress Gutenbergのheadingブロックに変換します。"""
+    safe_level = min(max(level, 1), 6)
+    safe_text = escape(text.strip())
+
+    if safe_level == 2:
+        return f"<!-- wp:heading -->\n<h2>{safe_text}</h2>\n<!-- /wp:heading -->"
+
+    return (
+        f'<!-- wp:heading {{"level":{safe_level}}} -->\n'
+        f"<h{safe_level}>{safe_text}</h{safe_level}>\n"
+        "<!-- /wp:heading -->"
+    )

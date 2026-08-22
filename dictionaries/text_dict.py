@@ -1,0 +1,6 @@
+TEXT_EXTENSIONS = {".txt"}
+
+TEXT_FORMAT_NAME = "plain_text"
+
+TEXT_PARAGRAPH_SEPARATOR = "\n\n"
+TEXT_LINE_BREAK_HTML = "<br><br>"
