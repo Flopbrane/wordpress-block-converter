@@ -68,6 +68,7 @@ def convert_markdown_to_gutenberg(load_file: str) -> str:
             continue
 
         if not stripped_line and h2_section_active:
+            _append_paragraph_blank_line(paragraph_lines)
             continue
 
         if not stripped_line:
@@ -109,6 +110,8 @@ def convert_markdown_to_gutenberg(load_file: str) -> str:
                 spacer_height = cast(int, MARKDOWN_HEADING_RULE["subheading_spacer_height"])
                 spacer_converter = cast(Callable[[int], str], MARKDOWN_SPACER_RULE["converter"])
                 blocks.append(spacer_converter(spacer_height))
+                blocks.append(create_paragraph_block(f"**{heading_match.group(2)}**"))
+                continue
 
             blocks.append(heading_converter(heading_match.group(2), level))
             if level == 1:
@@ -280,7 +283,29 @@ def convert_markdown_to_gutenberg(load_file: str) -> str:
 
 def _flush_paragraph(blocks: list[str], paragraph_lines: list[str]) -> None:
     if paragraph_lines:
-        blocks.append(create_paragraph_block(" ".join(paragraph_lines)))
+        blocks.append(create_paragraph_block(_build_paragraph_text(paragraph_lines)))
+
+
+def _append_paragraph_blank_line(paragraph_lines: list[str]) -> None:
+    if paragraph_lines and paragraph_lines[-1]:
+        paragraph_lines.append("")
+
+
+def _build_paragraph_text(paragraph_lines: list[str]) -> str:
+    paragraph_groups: list[list[str]] = [[]]
+
+    for line in paragraph_lines:
+        if line:
+            paragraph_groups[-1].append(line)
+        elif paragraph_groups[-1]:
+            paragraph_groups.append([])
+
+    joined_groups = [
+        " ".join(paragraph_group)
+        for paragraph_group in paragraph_groups
+        if paragraph_group
+    ]
+    return "\n\n".join(joined_groups)
 
 
 def _flush_list(blocks: list[str], list_items: list[str], ordered: bool) -> None:

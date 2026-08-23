@@ -50,7 +50,7 @@ MARKDOWN_HEADING_RULE: dict[str, str | re.Pattern[str] | Callable[..., object]] 
     "name": "heading",
     "pattern": MARKDOWN_HEADING_PATTERN,
     "converter": create_heading_block,
-    "subheading_spacer_height": 24,
+    "subheading_spacer_height": 12,
 }
 
 MARKDOWN_LIST_RULES: dict[str, dict[str, str | re.Pattern[str] | Callable[..., object] | bool]] = {
