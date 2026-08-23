@@ -4,6 +4,8 @@ Convert plain text, Markdown, and simple HTML files into WordPress Gutenberg-com
 
 This project is designed as a small beginner-friendly Python tool for preparing article drafts before pasting them into the WordPress block editor.
 
+This tool is designed for users who prefer preparing stable WordPress block HTML outside the visual editor and pasting it into the code editor.
+
 ## Features
 
 - Convert plain text paragraphs into WordPress paragraph blocks

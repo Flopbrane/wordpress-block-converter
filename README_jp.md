@@ -1,8 +1,12 @@
 # WordPress Block Converter
 
-平文、Markdown、簡単なHTMLを、WordPressのGutenbergブロック用HTMLへ変換するPythonツールです。
+平文、Markdown、簡単なHTMLを、WordPressのGutenbergブロック用HTMLへ変換するPythonツールです。  
 
-WordPressの記事下書きを作るときに、手作業でブロックコメントを書く負担を減らすことを目的にしています。
+WordPressの記事下書きを作るときに、手作業でブロックコメントを書く負担を減らすことを目的にしています。  
+
+このツールは、WordPressのビジュアルエディター上での自動整形を避け、  
+
+安定したブロックHTMLを作成してコードエディターへ貼り付けるための補助ツールです。  
 
 ## できること
 
