@@ -36,7 +36,7 @@ def convert_markdown_to_gutenberg(load_file: str) -> str:
     table_lines: list[str] = []
     code_lines: list[str] = []
     in_code_block: bool = False
-    h2_section_active: bool = False
+    heading_body_active: bool = False
 
     for line in load_file.splitlines():
         stripped_line: str = line.strip()
@@ -67,7 +67,7 @@ def convert_markdown_to_gutenberg(load_file: str) -> str:
             code_lines.append(line)
             continue
 
-        if not stripped_line and h2_section_active:
+        if not stripped_line and heading_body_active:
             _append_paragraph_blank_line(paragraph_lines)
             continue
 
@@ -114,10 +114,7 @@ def convert_markdown_to_gutenberg(load_file: str) -> str:
                 continue
 
             blocks.append(heading_converter(heading_match.group(2), level))
-            if level == 1:
-                h2_section_active = False
-            elif level == 2:
-                h2_section_active = True
+            heading_body_active = level in (1, 2)
             continue
 
         spacer_pattern: re.Pattern[str] = cast(re.Pattern[str], MARKDOWN_SPACER_RULE["pattern"])
