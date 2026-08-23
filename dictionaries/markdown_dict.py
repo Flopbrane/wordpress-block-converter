@@ -46,7 +46,7 @@ MARKDOWN_TABLE_ROW_PATTERN: re.Pattern[str] = re.compile(r"^\s*\|(.+)\|\s*$")
 MARKDOWN_TABLE_SEPARATOR_PATTERN: re.Pattern[str] = re.compile(r"^\s*\|?[\s:-]+\|[\s|:-]+\|?\s*$")
 MARKDOWN_EMBED_URL_PATTERN: re.Pattern[str] = re.compile(r"^https?://[^\s<]+$", re.IGNORECASE)
 
-MARKDOWN_HEADING_RULE: dict[str, str | re.Pattern[str] | Callable[..., object]] = {
+MARKDOWN_HEADING_RULE: dict[str, str | re.Pattern[str] | Callable[..., object] | int] = {
     "name": "heading",
     "pattern": MARKDOWN_HEADING_PATTERN,
     "converter": create_heading_block,
