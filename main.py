@@ -7,9 +7,9 @@
 
 import argparse
 import tkinter as tk
+from collections.abc import Callable
 from pathlib import Path
 from tkinter import filedialog, messagebox
-from typing import Callable
 
 from converters.html_converter import convert_html_to_gutenberg
 from converters.markdown_converter import convert_markdown_to_gutenberg

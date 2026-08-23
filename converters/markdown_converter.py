@@ -36,6 +36,7 @@ def convert_markdown_to_gutenberg(load_file: str) -> str:
     table_lines: list[str] = []
     code_lines: list[str] = []
     in_code_block: bool = False
+    h2_section_active: bool = False
 
     for line in load_file.splitlines():
         stripped_line: str = line.strip()
@@ -64,6 +65,9 @@ def convert_markdown_to_gutenberg(load_file: str) -> str:
 
         if in_code_block:
             code_lines.append(line)
+            continue
+
+        if not stripped_line and h2_section_active:
             continue
 
         if not stripped_line:
@@ -101,7 +105,16 @@ def convert_markdown_to_gutenberg(load_file: str) -> str:
             table_lines = []
             level = len(heading_match.group(1))
             heading_converter = cast(Callable[[str, int], str], MARKDOWN_HEADING_RULE["converter"])
+            if level == 3:
+                spacer_height = cast(int, MARKDOWN_HEADING_RULE["subheading_spacer_height"])
+                spacer_converter = cast(Callable[[int], str], MARKDOWN_SPACER_RULE["converter"])
+                blocks.append(spacer_converter(spacer_height))
+
             blocks.append(heading_converter(heading_match.group(2), level))
+            if level == 1:
+                h2_section_active = False
+            elif level == 2:
+                h2_section_active = True
             continue
 
         spacer_pattern: re.Pattern[str] = cast(re.Pattern[str], MARKDOWN_SPACER_RULE["pattern"])

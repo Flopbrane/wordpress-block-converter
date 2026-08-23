@@ -15,10 +15,14 @@ def create_heading_block(text: str, level: int = 2) -> str:
     safe_text = format_inline_text(text.strip())
 
     if safe_level == 2:
-        return f"<!-- wp:heading -->\n<h2>{safe_text}</h2>\n<!-- /wp:heading -->"
+        return (
+            "<!-- wp:heading -->\n"
+            f'<h2 class="wp-block-heading">{safe_text}</h2>\n'
+            "<!-- /wp:heading -->"
+        )
 
     return (
         f'<!-- wp:heading {{"level":{safe_level}}} -->\n'
-        f"<h{safe_level}>{safe_text}</h{safe_level}>\n"
+        f'<h{safe_level} class="wp-block-heading">{safe_text}</h{safe_level}>\n'
         "<!-- /wp:heading -->"
     )
