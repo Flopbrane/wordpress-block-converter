@@ -11,9 +11,15 @@ from collections.abc import Callable
 from pathlib import Path
 from tkinter import filedialog, messagebox
 
+from converters.hi_security_filter import apply_hi_security_filter
 from converters.html_converter import convert_html_to_gutenberg
 from converters.markdown_converter import convert_markdown_to_gutenberg
 from converters.text_converter import convert_text_to_gutenberg
+from dictionaries.hi_security_dict import (
+    CONVERSION_MODES,
+    HI_SECURITY_MODE,
+    NORMAL_MODE,
+)
 from dictionaries.html_dict import HTML_EXTENSIONS
 from dictionaries.markdown_dict import MARKDOWN_EXTENSIONS
 from dictionaries.text_dict import TEXT_EXTENSIONS
@@ -27,10 +33,17 @@ SUPPORTED_FILE_TYPES: list[tuple[str, str]] = [
 ]
 
 
-def convert_file(load_file_path: str | Path, save_file_path: str | Path) -> None:
+def convert_file(
+    load_file_path: str | Path,
+    save_file_path: str | Path,
+    mode: str = NORMAL_MODE,
+) -> None:
     """ファイルの拡張子に応じて、WordPress Gutenberg向けHTMLへ変換します。"""
     load_file_path = Path(load_file_path)
     save_file_path = Path(save_file_path)
+
+    if mode not in CONVERSION_MODES:
+        raise ValueError(f"対応していない変換モードです: {mode}")
 
     if not load_file_path.exists():
         raise FileNotFoundError(f"読み込みファイルが見つかりません: {load_file_path}")
@@ -38,6 +51,8 @@ def convert_file(load_file_path: str | Path, save_file_path: str | Path) -> None
     load_file: str = load_file_path.read_text(encoding="utf-8-sig")
     converter: Callable[..., str] = _select_converter(load_file_path.suffix.lower())
     save_file: str = converter(load_file)
+    if mode == HI_SECURITY_MODE:
+        save_file = apply_hi_security_filter(save_file)
 
     save_file_path.parent.mkdir(parents=True, exist_ok=True)
     save_file_path.write_text(save_file, encoding="utf-8")
@@ -69,6 +84,12 @@ def main() -> None:
     )
     parser.add_argument("load_file_path", nargs="?", help="変換したいファイルのパス")
     parser.add_argument("save_file_path", nargs="?", help="変換後HTMLを保存するパス")
+    parser.add_argument(
+        "--mode",
+        choices=CONVERSION_MODES,
+        default=NORMAL_MODE,
+        help="変換モードを選びます",
+    )
     parser.add_argument("--gui", action="store_true", help="ファイル選択画面で変換します")
     args: argparse.Namespace = parser.parse_args()
 
@@ -76,7 +97,7 @@ def main() -> None:
         run_gui()
         return
 
-    convert_file(args.load_file_path, args.save_file_path)
+    convert_file(args.load_file_path, args.save_file_path, mode=args.mode)
     print(f"変換が完了しました: {args.save_file_path}")
 
 
@@ -84,6 +105,11 @@ def run_gui() -> None:
     """ファイル選択画面からWordPress Gutenberg向けHTMLへ変換します。"""
     root = tk.Tk()
     root.withdraw()
+
+    mode: str = _select_mode_with_gui(root)
+    if not mode:
+        messagebox.showinfo("キャンセル", "変換をキャンセルしました。")
+        return
 
     load_file_path: str = filedialog.askopenfilename(
         title="変換したいファイルを選んでください",
@@ -106,7 +132,7 @@ def run_gui() -> None:
         return
 
     try:
-        convert_file(load_file_path, save_file_path)
+        convert_file(load_file_path, save_file_path, mode=mode)
     except (ValueError, TypeError, PermissionError) as error:
         messagebox.showerror("変換エラー", str(error))
         return
@@ -117,6 +143,44 @@ def run_gui() -> None:
 def _create_default_save_file_path(load_file_path: str | Path) -> Path:
     load_file_path = Path(load_file_path)
     return load_file_path.with_name(f"{load_file_path.stem}_wordpress.html")
+
+
+def _select_mode_with_gui(root: tk.Tk) -> str:
+    """GUIで変換モードを選びます。"""
+    selected_mode = tk.StringVar(value=NORMAL_MODE)
+    result: dict[str, str] = {"mode": ""}
+
+    mode_window = tk.Toplevel(root)
+    mode_window.title("変換モード")
+    mode_window.resizable(False, False)
+    mode_window.grab_set()
+
+    tk.Label(mode_window, text="変換モードを選んでください").pack(
+        padx=20,
+        pady=(16, 8),
+        anchor="w",
+    )
+    tk.Radiobutton(
+        mode_window,
+        text="Normal",
+        variable=selected_mode,
+        value=NORMAL_MODE,
+    ).pack(padx=24, anchor="w")
+    tk.Radiobutton(
+        mode_window,
+        text="企業向け安全モード",
+        variable=selected_mode,
+        value=HI_SECURITY_MODE,
+    ).pack(padx=24, anchor="w")
+
+    def decide_mode() -> None:
+        result["mode"] = selected_mode.get()
+        mode_window.destroy()
+
+    tk.Button(mode_window, text="OK", command=decide_mode).pack(pady=(8, 16))
+    mode_window.protocol("WM_DELETE_WINDOW", mode_window.destroy)
+    root.wait_window(mode_window)
+    return result["mode"]
 
 
 if __name__ == "__main__":

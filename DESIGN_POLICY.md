@@ -186,6 +186,18 @@ data:
 vbscript:
 ```
 
+### リンク検証メモ
+
+事業所WordPressでは、リンクが残るかどうかはまだ検証中です。
+
+現時点では、次の方針で扱います。
+
+- `href` が正しく付いたリンクだけを残します。
+- `harf` などの誤字属性はリンク先として扱いません。
+- `https://`、`mailto:`、`tel:`、`/`、`#` は残す候補にします。
+- `http://` は、企業案件では安全性が弱いため、Hi-Securityでは削除または文字列化を検討します。
+- `target`、`rel`、`class` などが残るかどうかは、事業所WordPressで追加検証します。
+
 ## 動画URLの方針
 
 Normal:
@@ -227,6 +239,47 @@ Normal、Hi-Securityともに、基本は以下の形を優先します。
 
 Gutenbergブロックコメントを使う場合も、Hi-Securityでは余計な属性を増やしすぎないようにします。
 
+### 事業所WordPressでのコード表示メモ
+
+事業所WordPressのCSSを確認したところ、`code` と `pre code` で見た目が分かれていました。
+
+確認できた傾向:
+
+- 段落内の `<code>` は赤系の文字になりやすいです。
+- `<pre><code>...</code></pre>` の中の `code` は、`pre` 側の文字色を引き継ぎ、黒系の表示になりやすいです。
+- そのため、短いHTMLタグ例は paragraph内の `<code>` として出す方が、初心者向け記事では見やすい可能性があります。
+- 長いコード例や複数行のコードは、引き続き `<pre><code>` を維持します。
+
+Hi-Securityでの推奨:
+
+```text
+短いHTMLタグ例:
+paragraph内の <code>
+
+長いコード例:
+<pre><code>
+```
+
+例:
+
+```html
+<p><code>&lt;h2&gt;</code> は見出しを表します。</p>
+
+<pre><code>def hello() -> None:
+    print("Hello, WordPress")</code></pre>
+```
+
+## 事業所WordPressのCSS観察メモ
+
+2026-08-25時点で、事業所WordPressから保存したCSSを確認した結果、次の傾向がありました。
+
+- `code` 単体には赤系の文字色が指定されていました。
+- `pre code` には `pre` 側の文字色を継承する指定がありました。
+- `h3:before` によって、見出しの文頭へ装飾が付く可能性があります。
+- `iframe` を前提にした動画表示用CSSは存在しますが、Hi-Securityでは `iframe` は使わず、通常リンクを優先します。
+
+このため、Hi-Security Modeでは「WordPressテーマの装飾に自然に乗る、素朴なHTML」を優先します。
+
 ## 今後の拡張基準
 
 新しい機能を追加するときは、次の順番で判断します。
@@ -261,3 +314,147 @@ JSON、XML、YAML、TOML、DOCX、XLSX、PDFなどは、Ver.2以降の検討対�
 
 特にHi-Securityは、「全部消すモード」ではありません。
 危険なものだけ避け、仕事で必要なリンクや本文構造は残すモードとして扱います。
+
+## Hi-Security Mode 実装方針
+
+Hi-Security Mode は、通常変換処理を別系統に分けず、通常変換後のHTMLに安全化フィルターを通す方式を基本とします。
+
+基本の流れ:
+
+```text
+load_file 読み込み
+↓
+拡張子に応じて通常変換
+↓
+mode が hi-security の場合だけ安全化フィルターを適用
+↓
+save_file に保存
+```
+
+## CLIでは --mode を使用します
+
+python .\main.py .\sample.md .\sample_wordpress.html --mode normal
+python .\main.py .\sample.md .\sample_safe_wordpress.html --mode hi-security
+
+省略時は normal とします。
+
+## GUIでは、変換前に以下の選択肢を表示します。
+
+変換モード:
+(*) Normal
+( ) 企業向け安全モード
+
+内部名:
+| 表示名             | 内部名        |
+| ------------------ | ------------- |
+| Normal             | `normal`      |
+| 企業向け安全モード | `hi-security` |
+
+## 共用方針
+
+Normal用とHi-Security用で、converter全体を二重化しません。
+
+共用するもの:
+
+- text_converter.py
+- markdown_converter.py
+- html_converter.py
+- blocks/ 配下の基本ブロック生成処理
+- 既存の辞書ファイル
+
+Hi-Security専用に分けるもの:
+
+- 安全化ルール
+- 禁止タグ一覧
+- 許可タグ一覧
+- 禁止属性一覧
+- URLスキーム判定
+- embed を通常リンクへ戻す処理
+- 安全化フィルターの適用処理
+
+追加ファイル案
+dictionaries/hi_security_dict.py
+converters/hi_security_filter.py
+
+hi_security_dict.py には、判定用の定数を集めます。
+
+### 例:
+
+```python
+ALLOWED_TAGS = {
+    "p", "h2", "h3", "h4",
+    "ul", "ol", "li",
+    "strong", "em",
+    "a", "img",
+    "table", "thead", "tbody", "tr", "th", "td",
+    "pre", "code", "br",
+}
+
+BLOCKED_TAGS = {
+    "script", "iframe", "style", "object", "embed",
+    "form", "input", "button", "textarea", "select",
+}
+
+BLOCKED_ATTRIBUTES = {
+    "onclick", "onload", "onerror", "onmouseover", "style",
+}
+
+ALLOWED_URL_PREFIXES = (
+    "https://",
+    "mailto:",
+    "tel:",
+    "/",
+    "#",
+)
+
+BLOCKED_URL_PREFIXES = (
+    "javascript:",
+    "data:",
+    "vbscript:",
+)
+```
+
+## Hi-Securityでの変換方針
+
+| 入力           | Normal           | Hi-Security                   |
+| -------------- | ---------------- | ----------------------------- |
+| YouTube URL    | `wp:embed`       | 通常リンク                    |
+| TikTok URL     | `wp:embed`       | 通常リンク                    |
+| Vimeo URL      | `wp:embed`       | 通常リンク                    |
+| `<iframe>`     | 必要に応じて保持 | 削除またはリンク化            |
+| `<script>`     | 削除             | 削除                          |
+| `<style>`      | 場合により保持   | 削除                          |
+| `onclick` など | 削除             | 削除                          |
+| `javascript:`  | 削除             | 削除                          |
+| 短いタグ例     | 通常処理         | paragraph内の `<code>` を優先 |
+| 長いコード     | `wp:code`        | `<pre><code>` を維持          |
+
+## 見出しルール
+
+WordPressでは記事タイトルが h1 相当になるため、Hi-Security Modeでは本文内の見出しを h2 から始めることを推奨します。
+
+| Markdown | Normal | Hi-Security                   |
+| -------- | ------ | ----------------------------- |
+| `#`      | `h1`   | 記事タイトル候補、または `h2` |
+| `##`     | `h2`   | `h2`                          |
+| `###`    | `h3`   | `h3`                          |
+| `####`   | `h4`   | `h4`                          |
+
+先生としては、まず実装はこの形が良いです。
+
+```text
+main.py
+  --mode を受け取る
+
+既存converter
+  今まで通り変換
+
+hi_security_filter.py
+  最後に安全化
+
+hi_security_dict.py
+  ルールだけ持つ
+
+この構成なら、Normal版を壊しにくいです。
+しかも事業所WPで分かった実戦データを、hi_security_dict.py に少しずつ足して育てられます。
+```

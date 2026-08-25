@@ -14,6 +14,7 @@ MARKDOWN_LINK_PATTERN: re.Pattern[str] = re.compile(r"\[([^\]]+)\]\((https?://[^
 URL_PATTERN: re.Pattern[str] = re.compile(r"(?<![\"'=])\bhttps?://[^\s<]+")
 BOLD_PATTERN: re.Pattern[str] = re.compile(r"\*\*(.+?)\*\*")
 ITALIC_PATTERN: re.Pattern[str] = re.compile(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)")
+INLINE_CODE_PATTERN: re.Pattern[str] = re.compile(r"`([^`\n]+)`")
 
 
 def format_inline_text(text: str, line_break_html: str = "<br>") -> str:
@@ -46,5 +47,6 @@ def _create_link_html(label: str, url: str) -> str:
 
 
 def _format_emphasis(text: str) -> str:
+    text = INLINE_CODE_PATTERN.sub(r"<code>\1</code>", text)
     text = BOLD_PATTERN.sub(r"<strong>\1</strong>", text)
     return ITALIC_PATTERN.sub(r"<em>\1</em>", text)

@@ -32,6 +32,7 @@ sample.txt
 *output.txt
 *output.md
 *output.html
+*.html
 # Logs
 *.log
 
