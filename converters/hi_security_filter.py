@@ -32,11 +32,15 @@ CODE_BLOCK_PATTERN: re.Pattern[str] = re.compile(
     CODE_BLOCK_PATTERN_TEXT,
     re.IGNORECASE | re.DOTALL,
 )
+SAFE_BLOCK_START_COMMENT_PATTERN: re.Pattern[str] = re.compile(
+    r"^\s*wp:(paragraph|heading)(?:\s+\{\"level\":[2-6]\})?\s*$"
+)
+SAFE_BLOCK_END_COMMENT_PATTERN: re.Pattern[str] = re.compile(
+    r"^\s*/wp:(paragraph|heading)\s*$"
+)
 
 HEADING_LEVEL_MAP: dict[str, str] = {
     "h1": "h2",
-    "h5": "h4",
-    "h6": "h4",
 }
 
 
@@ -66,7 +70,11 @@ def _convert_short_code_block_to_paragraph(code_match: re.Match[str]) -> str:
         for line in code_text.splitlines()
         if line.strip()
     ]
-    return f"<p>{'<br><br>'.join(code_lines)}</p>"
+    return (
+        "<!-- wp:paragraph -->\n"
+        f"<p>{'<br><br>'.join(code_lines)}</p>\n"
+        "<!-- /wp:paragraph -->"
+    )
 
 
 def _should_convert_code_to_paragraph(code_text: str) -> bool:
@@ -94,6 +102,7 @@ class HiSecurityHTMLFilter(HTMLParser):
         self._parts: list[str] = []
         self._drop_content_depth: int = 0
         self._open_tags: list[str] = []
+        self._open_block_comments: list[str] = []
 
     def get_html(self) -> str:
         """安全化したHTMLを返します。"""
@@ -175,6 +184,26 @@ class HiSecurityHTMLFilter(HTMLParser):
     def handle_charref(self, name: str) -> None:
         if not self._drop_content_depth:
             self._parts.append(f"&#{name};")
+
+    def handle_comment(self, data: str) -> None:
+        if self._drop_content_depth:
+            return
+
+        start_match = SAFE_BLOCK_START_COMMENT_PATTERN.match(data)
+        if start_match:
+            block_name = start_match.group(1)
+            self._open_block_comments.append(block_name)
+            self._parts.append(f"<!--{data}-->")
+            return
+
+        end_match = SAFE_BLOCK_END_COMMENT_PATTERN.match(data)
+        if not end_match:
+            return
+
+        block_name = end_match.group(1)
+        if block_name in self._open_block_comments:
+            self._parts.append(f"<!--{data}-->")
+            self._open_block_comments.remove(block_name)
 
 
 def _normalize_tag(tag: str) -> str:

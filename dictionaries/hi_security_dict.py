@@ -10,7 +10,7 @@ NORMAL_MODE = "normal"
 HI_SECURITY_MODE = "hi-security"
 CONVERSION_MODES: tuple[str, str] = (NORMAL_MODE, HI_SECURITY_MODE)
 
-TEXT_TAGS: tuple[str, ...] = ("p", "h2", "h3", "h4", "strong", "em", "br")
+TEXT_TAGS: tuple[str, ...] = ("p", "h2", "h3", "h4", "h5", "h6", "strong", "em", "br")
 LIST_TAGS: tuple[str, ...] = ("ul", "ol", "li")
 MEDIA_TAGS: tuple[str, ...] = ("a", "img")
 TABLE_TAGS: tuple[str, ...] = ("table", "thead", "tbody", "tr", "th", "td")
