@@ -22,7 +22,7 @@ def test_apply_hi_security_filter_removes_blocked_tags_and_attributes() -> None:
 
     save_file = apply_hi_security_filter(load_file)
 
-    assert "<h2>見出し</h2>" in save_file
+    assert '<h2 class="wp-block-heading">見出し</h2>' in save_file
     assert "style=" not in save_file
     assert "onclick=" not in save_file
     assert "javascript:" not in save_file
@@ -88,14 +88,56 @@ def test_apply_hi_security_filter_converts_short_html_list_example() -> None:
 def test_apply_hi_security_filter_keeps_long_code_blocks() -> None:
     """長いコードブロックはpre/codeとして残すテストです。"""
     load_file = (
-        "<pre><code>"
+        "<!-- wp:code -->\n"
+        '<pre class="wp-block-code"><code>'
         "line1\nline2\nline3\nline4\nline5\nline6\nline7"
-        "</code></pre>"
+        "</code></pre>\n"
+        "<!-- /wp:code -->"
     )
 
     save_file = apply_hi_security_filter(load_file)
 
-    assert "<pre><code>" in save_file
+    assert "<!-- wp:code -->" in save_file
+    assert '<pre class="wp-block-code"><code>' in save_file
+    assert "<!-- /wp:code -->" in save_file
+
+
+def test_apply_hi_security_filter_keeps_table_block_comments() -> None:
+    """tableブロックコメントと表本体を残すテストです。"""
+    load_file = (
+        "<!-- wp:table -->\n"
+        '<figure class="wp-block-table"><table>\n'
+        "<thead><tr><th>項目</th></tr></thead>\n"
+        "<tbody><tr><td>内容</td></tr></tbody>\n"
+        "</table></figure>\n"
+        "<!-- /wp:table -->"
+    )
+
+    save_file = apply_hi_security_filter(load_file)
+
+    assert "<!-- wp:table -->" in save_file
+    assert '<figure class="wp-block-table">' in save_file
+    assert "<table>" in save_file
+    assert "<th>項目</th>" in save_file
+    assert "<td>内容</td>" in save_file
+    assert "<!-- /wp:table -->" in save_file
+
+
+def test_apply_hi_security_filter_converts_paragraph_dash_to_separator() -> None:
+    """段落内の---をWordPress区切り線へ変換するテストです。"""
+    load_file = (
+        "<!-- wp:paragraph -->\n"
+        "<p>---</p>\n"
+        "<!-- /wp:paragraph -->"
+    )
+
+    save_file = apply_hi_security_filter(load_file)
+
+    assert "<!-- wp:paragraph -->" not in save_file
+    assert "<p>---</p>" not in save_file
+    assert "<!-- wp:separator -->" in save_file
+    assert '<hr class="wp-block-separator has-alpha-channel-opacity">' in save_file
+    assert "<!-- /wp:separator -->" in save_file
 
 
 def test_apply_hi_security_filter_keeps_safe_heading_block_comments() -> None:
@@ -109,7 +151,7 @@ def test_apply_hi_security_filter_keeps_safe_heading_block_comments() -> None:
     save_file = apply_hi_security_filter(load_file)
 
     assert '<!-- wp:heading {"level":3} -->' in save_file
-    assert "<h3>小見出し</h3>" in save_file
+    assert '<h3 class="wp-block-heading">小見出し</h3>' in save_file
     assert "<!-- /wp:heading -->" in save_file
 
 
@@ -124,12 +166,70 @@ def test_apply_hi_security_filter_keeps_h5_heading_level() -> None:
     save_file = apply_hi_security_filter(load_file)
 
     assert '<!-- wp:heading {"level":5} -->' in save_file
-    assert "<h5>補足見出し</h5>" in save_file
+    assert '<h5 class="wp-block-heading">補足見出し</h5>' in save_file
     assert "<h4>補足見出し</h4>" not in save_file
 
 
+def test_apply_hi_security_filter_adds_heading_level_to_h2() -> None:
+    """h2見出しにもWordPressのlevelを明記するテストです。"""
+    load_file = (
+        "<!-- wp:heading -->\n"
+        '<h2 class="wp-block-heading">見出し</h2>\n'
+        "<!-- /wp:heading -->"
+    )
+
+    save_file = apply_hi_security_filter(load_file)
+
+    assert '<!-- wp:heading {"level":2} -->' in save_file
+    assert '<h2 class="wp-block-heading">見出し</h2>' in save_file
+
+
+def test_apply_hi_security_filter_normalizes_h1_and_h6_headings() -> None:
+    """本文用にh1はh2へ、h6はh5へ寄せるテストです。"""
+    load_file = (
+        '<!-- wp:heading {"level":1} -->\n'
+        '<h1 class="wp-block-heading">大見出し</h1>\n'
+        "<!-- /wp:heading -->\n"
+        '<!-- wp:heading {"level":6} -->\n'
+        '<h6 class="wp-block-heading">小さい見出し</h6>\n'
+        "<!-- /wp:heading -->"
+    )
+
+    save_file = apply_hi_security_filter(load_file)
+
+    assert '<!-- wp:heading {"level":2} -->' in save_file
+    assert '<h2 class="wp-block-heading">大見出し</h2>' in save_file
+    assert '<!-- wp:heading {"level":5} -->' in save_file
+    assert '<h5 class="wp-block-heading">小さい見出し</h5>' in save_file
+
+
+def test_apply_hi_security_filter_keeps_safe_link_attributes() -> None:
+    """安全なリンク属性を残し、target blankにはnoopenerを補うテストです。"""
+    load_file = (
+        '<p><a href="https://example.com" target="_blank" title="公式">'
+        "公式サイト</a></p>"
+    )
+
+    save_file = apply_hi_security_filter(load_file)
+
+    assert (
+        '<a href="https://example.com" target="_blank" title="公式" rel="noopener">'
+        "公式サイト</a>"
+    ) in save_file
+
+
+def test_apply_hi_security_filter_turns_http_link_into_text() -> None:
+    """httpリンクはリンク化せず、表示文字だけ残すテストです。"""
+    load_file = '<p><a href="http://example.com">http://example.com</a></p>'
+
+    save_file = apply_hi_security_filter(load_file)
+
+    assert 'href="http://example.com"' not in save_file
+    assert "http://example.com" in save_file
+
+
 def test_apply_hi_security_filter_removes_unsafe_block_comments() -> None:
-    """code/htmlなどのブロックコメントは残さないテストです。"""
+    """htmlなどのブロックコメントは残さないテストです。"""
     load_file = (
         "<!-- wp:html -->\n"
         "<p>本文</p>\n"

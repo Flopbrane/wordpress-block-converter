@@ -21,6 +21,7 @@ from dictionaries.hi_security_dict import (
     CODE_BLOCK_PATTERN_TEXT,
     DROP_CONTENT_TAGS,
     EMBED_BLOCK_PATTERN_TEXT,
+    PARAGRAPH_SEPARATOR_PATTERN_TEXT,
     SHORT_CODE_MAX_LINES,
 )
 
@@ -32,21 +33,34 @@ CODE_BLOCK_PATTERN: re.Pattern[str] = re.compile(
     CODE_BLOCK_PATTERN_TEXT,
     re.IGNORECASE | re.DOTALL,
 )
+PARAGRAPH_SEPARATOR_PATTERN: re.Pattern[str] = re.compile(
+    PARAGRAPH_SEPARATOR_PATTERN_TEXT,
+    re.IGNORECASE | re.DOTALL,
+)
+HEADING_BLOCK_PATTERN: re.Pattern[str] = re.compile(
+    r"<!--\s*wp:heading\b[^>]*-->\s*"
+    r"<h([1-6])(\s[^>]*)?>(.*?)</h\1>\s*"
+    r"<!--\s*/wp:heading\s*-->",
+    re.IGNORECASE | re.DOTALL,
+)
 SAFE_BLOCK_START_COMMENT_PATTERN: re.Pattern[str] = re.compile(
-    r"^\s*wp:(paragraph|heading)(?:\s+\{\"level\":[2-6]\})?\s*$"
+    r"^\s*wp:(paragraph|heading|code|table|separator)(?:\s+\{\"level\":[2-5]\})?\s*$"
 )
 SAFE_BLOCK_END_COMMENT_PATTERN: re.Pattern[str] = re.compile(
-    r"^\s*/wp:(paragraph|heading)\s*$"
+    r"^\s*/wp:(paragraph|heading|code|table|separator)\s*$"
 )
 
 HEADING_LEVEL_MAP: dict[str, str] = {
     "h1": "h2",
+    "h6": "h5",
 }
 
 
 def apply_hi_security_filter(save_file: str) -> str:
     """変換後HTMLを、制限の強いWordPress向けの安全HTMLに整えます。"""
     save_file = EMBED_BLOCK_PATTERN.sub(_convert_embed_block_to_link, save_file)
+    save_file = HEADING_BLOCK_PATTERN.sub(_normalize_heading_block, save_file)
+    save_file = PARAGRAPH_SEPARATOR_PATTERN.sub(_create_separator_block, save_file)
     save_file = CODE_BLOCK_PATTERN.sub(_convert_short_code_block_to_paragraph, save_file)
     parser = HiSecurityHTMLFilter()
     parser.feed(save_file)
@@ -57,7 +71,38 @@ def apply_hi_security_filter(save_file: str) -> str:
 def _convert_embed_block_to_link(embed_match: re.Match[str]) -> str:
     url: str = embed_match.group(1).strip()
     safe_url: str = escape(url, quote=True)
-    return f'<p><a href="{safe_url}">{safe_url}</a></p>'
+    return (
+        "<!-- wp:paragraph -->\n"
+        f'<p><a href="{safe_url}">{safe_url}</a></p>\n'
+        "<!-- /wp:paragraph -->"
+    )
+
+
+def _normalize_heading_block(heading_match: re.Match[str]) -> str:
+    heading_level = _normalize_heading_level(int(heading_match.group(1)))
+    attrs = heading_match.group(2) or ""
+    heading_text = heading_match.group(3)
+    return (
+        f'<!-- wp:heading {{"level":{heading_level}}} -->\n'
+        f"<h{heading_level}{attrs}>{heading_text}</h{heading_level}>\n"
+        "<!-- /wp:heading -->"
+    )
+
+
+def _normalize_heading_level(level: int) -> int:
+    if level <= 2:
+        return 2
+    if level >= 5:
+        return 5
+    return level
+
+
+def _create_separator_block(_separator_match: re.Match[str]) -> str:
+    return (
+        "<!-- wp:separator -->\n"
+        '<hr class="wp-block-separator has-alpha-channel-opacity"/>\n'
+        "<!-- /wp:separator -->"
+    )
 
 
 def _convert_short_code_block_to_paragraph(code_match: re.Match[str]) -> str:
@@ -154,7 +199,7 @@ class HiSecurityHTMLFilter(HTMLParser):
         if output_tag == "img" and not _has_attribute(clean_attrs, "src"):
             return
 
-        if output_tag in {"br", "img"}:
+        if output_tag in {"br", "hr", "img"}:
             self._parts.append(_build_start_tag(output_tag, clean_attrs))
 
     def handle_endtag(self, tag: str) -> None:
@@ -237,7 +282,13 @@ def _filter_attributes(
         if clean_name == "src" and not _is_allowed_url(clean_value, ALLOWED_SRC_PREFIXES):
             continue
 
+        if clean_name == "target" and clean_value != "_blank":
+            continue
+
         clean_attrs.append((clean_name, clean_value))
+
+    if tag == "a":
+        clean_attrs = _ensure_noopener(clean_attrs)
 
     return clean_attrs
 
@@ -252,6 +303,28 @@ def _is_allowed_url(url: str, allowed_prefixes: tuple[str, ...]) -> bool:
         return False
 
     return lower_url.startswith(allowed_prefixes)
+
+
+def _ensure_noopener(attrs: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    has_blank_target = any(
+        name == "target" and value == "_blank"
+        for name, value in attrs
+    )
+    if not has_blank_target:
+        return attrs
+
+    for index, (name, value) in enumerate(attrs):
+        if name != "rel":
+            continue
+
+        rel_values = value.split()
+        if "noopener" not in rel_values:
+            rel_values.append("noopener")
+        attrs[index] = (name, " ".join(rel_values))
+        return attrs
+
+    attrs.append(("rel", "noopener"))
+    return attrs
 
 
 def _build_start_tag(tag: str, attrs: list[tuple[str, str]]) -> str:

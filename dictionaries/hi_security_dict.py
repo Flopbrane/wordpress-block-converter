@@ -10,10 +10,10 @@ NORMAL_MODE = "normal"
 HI_SECURITY_MODE = "hi-security"
 CONVERSION_MODES: tuple[str, str] = (NORMAL_MODE, HI_SECURITY_MODE)
 
-TEXT_TAGS: tuple[str, ...] = ("p", "h2", "h3", "h4", "h5", "h6", "strong", "em", "br")
+TEXT_TAGS: tuple[str, ...] = ("p", "h2", "h3", "h4", "h5", "strong", "em", "br", "hr")
 LIST_TAGS: tuple[str, ...] = ("ul", "ol", "li")
 MEDIA_TAGS: tuple[str, ...] = ("a", "img")
-TABLE_TAGS: tuple[str, ...] = ("table", "thead", "tbody", "tr", "th", "td")
+TABLE_TAGS: tuple[str, ...] = ("figure", "table", "thead", "tbody", "tr", "th", "td")
 CODE_TAGS: tuple[str, ...] = ("pre", "code")
 
 ALLOWED_TAGS: set[str] = {
@@ -56,8 +56,23 @@ BLOCKED_ATTRIBUTES: set[str] = {
 }
 
 ALLOWED_ATTRIBUTES_BY_TAG: dict[str, set[str]] = {
-    "a": {"href"},
-    "img": {"src", "alt"},
+    "a": {"href", "target", "rel", "title", "id", "class"},
+    "img": {"src", "alt", "title", "id", "class"},
+    "h2": {"id", "class"},
+    "h3": {"id", "class"},
+    "h4": {"id", "class"},
+    "h5": {"id", "class"},
+    "p": {"id", "class"},
+    "hr": {"id", "class"},
+    "table": {"id", "class"},
+    "figure": {"id", "class"},
+    "thead": {"id", "class"},
+    "tbody": {"id", "class"},
+    "tr": {"id", "class"},
+    "th": {"id", "class"},
+    "td": {"id", "class"},
+    "pre": {"id", "class"},
+    "code": {"id", "class"},
 }
 
 ALLOWED_HREF_PREFIXES: tuple[str, ...] = (
@@ -98,4 +113,10 @@ CODE_BLOCK_PATTERN_TEXT = (
     r"<code\b[^>]*>(.*?)</code>\s*"
     r"</pre>\s*"
     r"(?:<!--\s*/wp:code\s*-->)?"
+)
+
+PARAGRAPH_SEPARATOR_PATTERN_TEXT = (
+    r"(?:<!--\s*wp:paragraph\s*-->\s*)?"
+    r"<p\b[^>]*>\s*(?:-{3,}|\*{3,}|_{3,})\s*</p>\s*"
+    r"(?:<!--\s*/wp:paragraph\s*-->)?"
 )

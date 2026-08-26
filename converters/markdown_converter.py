@@ -106,6 +106,11 @@ def convert_markdown_to_gutenberg(load_file: str) -> str:
             table_lines = []
             level = len(heading_match.group(1))
             heading_converter = cast(Callable[[str, int], str], MARKDOWN_HEADING_RULE["converter"])
+            if level == 2:
+                paragraph_lines.append(stripped_line)
+                heading_body_active = True
+                continue
+
             if level == 3:
                 spacer_height = cast(int, MARKDOWN_HEADING_RULE["subheading_spacer_height"])
                 spacer_converter = cast(Callable[[int], str], MARKDOWN_SPACER_RULE["converter"])

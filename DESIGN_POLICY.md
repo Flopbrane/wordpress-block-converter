@@ -195,8 +195,9 @@ vbscript:
 - `href` が正しく付いたリンクだけを残します。
 - `harf` などの誤字属性はリンク先として扱いません。
 - `https://`、`mailto:`、`tel:`、`/`、`#` は残す候補にします。
-- `http://` は、企業案件では安全性が弱いため、Hi-Securityでは削除または文字列化を検討します。
-- `target`、`rel`、`class` などが残るかどうかは、事業所WordPressで追加検証します。
+- `http://` は、企業案件では安全性が弱いため、Hi-Securityではリンク化せず文字列として残します。
+- `target="_blank"` を残す場合は、`rel="noopener"` を付けます。
+- `title`、`id`、`class` は必要最小限の安全寄り属性として残す候補にします。
 
 ## 動画URLの方針
 
@@ -257,7 +258,7 @@ Hi-Securityでの推奨:
 paragraph内の <code>
 
 長いコード例:
-<pre><code>
+wp:code + <pre class="wp-block-code"><code>
 ```
 
 例:
@@ -267,6 +268,14 @@ paragraph内の <code>
 
 <pre><code>def hello() -> None:
     print("Hello, WordPress")</code></pre>
+```
+
+長いコード例は、WordPressコードエディターへ貼り付ける用途を考え、Hi-Securityでも次のブロックコメントを残します。
+
+```html
+<!-- wp:code -->
+<pre class="wp-block-code"><code>コード本文</code></pre>
+<!-- /wp:code -->
 ```
 
 ## 事業所WordPressのCSS観察メモ
@@ -457,4 +466,93 @@ hi_security_dict.py
 
 この構成なら、Normal版を壊しにくいです。
 しかも事業所WPで分かった実戦データを、hi_security_dict.py に少しずつ足して育てられます。
+```
+
+## Hi-Security Mode Policy
+
+Hi-Security mode is designed for restricted WordPress environments.
+
+The converter should prefer stable Gutenberg-compatible HTML that survives saving in the block editor.
+
+Priority:
+1. Preserve readable article structure.
+2. Avoid unsafe or easily stripped HTML.
+3. Keep normal mode unchanged.
+4. Share existing converter and block functions where possible.
+
+Allowed direction:
+- headings: h2, h3, h4, h5
+- paragraph text
+- inline code
+- safe links
+- images with src and alt
+- tables
+- pre/code blocks
+
+Avoid:
+- script
+- iframe
+- style
+- object
+- embed
+- forms
+- event attributes
+- javascript: URLs
+
+External videos should become normal links in Hi-Security mode.
+
+## Hi-Security Heading Comment Policy
+
+Hi-Security Modeでは、見出しタグとWordPressブロックコメントのlevelをそろえます。
+
+推奨する出力:
+
+```html
+<!-- wp:heading {"level":2} -->
+<h2 class="wp-block-heading">見出し</h2>
+<!-- /wp:heading -->
+
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">小見出し</h3>
+<!-- /wp:heading -->
+```
+
+方針:
+
+- `h2`、`h3`、`h4`、`h5` を本文見出しとして使います。
+- Hi-Securityでは `h2` にも `{"level":2}` を明記します。
+- Markdownの `#` は、本文内では `h2` 相当に寄せます。
+- `h6` は、企業向け安全モードでは `h5` へ寄せます。
+
+## Hi-Security Block Comment Policy
+
+Hi-Security Modeでは、保存後の生存率とWordPressコードエディターでの扱いやすさを両立するため、安全寄りのブロックコメントだけを残します。
+
+残すブロックコメント:
+
+- `wp:paragraph`
+- `wp:heading`
+- `wp:code`
+- `wp:table`
+- `wp:separator`
+
+原則として避けるブロックコメント:
+
+- `wp:html`
+- `wp:embed`
+
+表は、可能な範囲で次の形を維持します。
+
+```html
+<!-- wp:table -->
+<figure class="wp-block-table"><table>...</table></figure>
+<!-- /wp:table -->
+```
+
+段落内に `---`、`***`、`___` だけが入っている場合は、区切り線として扱います。
+
+```html
+<!-- wp:separator -->
+<hr class="wp-block-separator has-alpha-channel-opacity"/>
+<!-- /wp:separator -->
 ```
