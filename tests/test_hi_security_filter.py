@@ -240,3 +240,23 @@ def test_apply_hi_security_filter_removes_unsafe_block_comments() -> None:
 
     assert "<!-- wp:html -->" not in save_file
     assert "<p>本文</p>" in save_file
+
+
+def test_apply_hi_security_filter_removes_css_from_lp_html() -> None:
+    """LP用HTMLにCSS指定が混ざってもCSSを残さないテストです。"""
+    load_file = (
+        "<style>.lp-row{display:flex;gap:24px;}</style>"
+        '<div class="lp-row" style="display:flex;gap:24px;">'
+        '<p style="color:red;">サービス紹介</p>'
+        '<img src="https://example.com/service.jpg" alt="サービス" style="width:33%;">'
+        "</div>"
+    )
+
+    save_file = apply_hi_security_filter(load_file)
+
+    assert "<style>" not in save_file
+    assert "display:flex" not in save_file
+    assert "gap:24px" not in save_file
+    assert "style=" not in save_file
+    assert "<p>サービス紹介</p>" in save_file
+    assert '<img src="https://example.com/service.jpg" alt="サービス">' in save_file

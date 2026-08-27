@@ -13,6 +13,8 @@ WordPressの記事下書きを作るときに、手作業でブロックコメ�
 - 平文 `.txt` を段落ブロックへ変換
 - Markdownの見出し、本文、リスト、引用、コード、表、区切り線、画像、ショートコードを変換
 - HTMLの見出し、段落、リスト、引用、コード、表、画像、リンク、ショートコードを変換
+- CSV/SSV/TSV/PSVなどの区切り値ファイルを表ブロックへ変換
+- JSONの構造データから見出し、段落、リスト、表、FAQを変換
 - YouTube、YouTube Shorts、TikTok、VimeoなどのURLを埋め込みブロックへ変換
 - 画像・動画・音声・PDFなどの直接URLを、それぞれ適したブロックへ変換
 - リンク、太字、斜体などの基本的な本文装飾を保持
@@ -28,6 +30,18 @@ WordPressの記事下書きを作るときに、手作業でブロックコメ�
 | 平文 | `.txt` |
 | Markdown | `.md`, `.markdown` |
 | HTML | `.html`, `.htm` |
+| 区切り値ファイル | `.csv`, `.ssv`, `.tsv`, `.psv`, `.pipesv` |
+| JSON | `.json` |
+
+## バージョン対応
+
+| バージョン | 対応内容 | 状態 |
+|---|---|---|
+| Ver.1.0 | 平文、Markdown、HTMLの基本変換 | 対応済み |
+| Ver.1.1 | 埋め込みURL、画像、動画、音声、ファイルURL、Hi-Security Mode | 対応済み |
+| Ver.1.2 | CSV / SSV / TSV / PSVをtableブロックへ変換 | 対応済み |
+| Ver.1.3 | JSONから見出し、段落、リスト、表、FAQを生成 | 対応済み |
+| Ver.1.4 | Markdown独自レイアウト記法。画像横並び、画像＋文章、CTA、FAQ、カード型レイアウト | 予定 |
 
 ## 対応しているWordPressブロック
 
@@ -91,6 +105,30 @@ WordPressの記事下書きを作るときに、手作業でブロックコメ�
 - `<hr>`
 
 `<b>` は `<strong>` に、`<i>` は `<em>` に寄せて出力します。
+
+### 区切り値ファイル
+
+CSV、TSV、SSV、PSVをWordPressのtableブロックへ変換します。
+
+- `.csv`: カンマ区切り
+- `.tsv`: タブ区切り
+- `.ssv`: スペース区切り、またはセミコロン区切り
+- `.psv`, `.pipesv`: パイプ区切り
+
+区切り文字はファイル内容からも推定します。1行目は見出し行として扱います。
+
+### JSON
+
+JSONの構造データから、WordPressの基本ブロックを生成します。
+
+- `title`, `heading`: 見出し
+- `text`, `body`, `description`: 段落
+- `sections`, `blocks`, `content`: セクション
+- `items`, `list`: リスト
+- `table`, `rows`: 表
+- `faq`, `faqs`: FAQ
+
+1つのJSONから、会社紹介ページ、サービス紹介ページ、FAQ、商品一覧のような下書きを作れます。
 
 ### URLの分別
 
@@ -175,10 +213,17 @@ https://www.youtube.com/watch?v=dQw4w9WgXcQ
 ```text
 wp_converter/
 ├─ main.py
+├─ storage.py
+├─ file_checker.py
+├─ gui_maker.py
 ├─ converters/
+│  ├─ document_converter.py
+│  ├─ hi_security_filter.py
+│  ├─ html_converter.py
+│  ├─ json_converter.py
 │  ├─ markdown_converter.py
+│  ├─ separated_values_converter.py
 │  ├─ text_converter.py
-│  └─ html_converter.py
 ├─ blocks/
 │  ├─ code.py
 │  ├─ embed.py
@@ -195,16 +240,22 @@ wp_converter/
 │  ├─ spacer.py
 │  └─ table.py
 └─ dictionaries/
+   ├─ hi_security_dict.py
+   ├─ html_dict.py
+   ├─ json_dict.py
    ├─ markdown_dict.py
-   ├─ text_dict.py
-   └─ html_dict.py
+   ├─ separated_values_dict.py
+   └─ text_dict.py
 ```
 
 ## 各フォルダの役割
 
 | 場所 | 役割 |
 |---|---|
-| `main.py` | file選択、引数処理、保存処理 |
+| `main.py` | 引数処理、変換全体の流れ |
+| `storage.py` | load_fileの読み込み、save_fileの保存 |
+| `file_checker.py` | 対応拡張子の確認、converter選択 |
+| `gui_maker.py` | GUI表示、ファイル選択画面 |
 | `converters/` | 入力形式ごとの変換処理 |
 | `blocks/` | WordPressブロックHTMLを作る部品 |
 | `dictionaries/` | 変換ルール、正規表現、対応拡張子 |

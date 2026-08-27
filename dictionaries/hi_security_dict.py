@@ -52,6 +52,7 @@ BLOCKED_ATTRIBUTES: set[str] = {
     "onload",
     "onerror",
     "onmouseover",
+    # Hi-Security ModeではCSSに頼らず、Gutenberg標準ブロックを優先します。
     "style",
 }
 

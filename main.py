@@ -6,31 +6,17 @@
 #########################
 
 import argparse
-import tkinter as tk
-from collections.abc import Callable
 from pathlib import Path
-from tkinter import filedialog, messagebox
 
 from converters.hi_security_filter import apply_hi_security_filter
-from converters.html_converter import convert_html_to_gutenberg
-from converters.markdown_converter import convert_markdown_to_gutenberg
-from converters.text_converter import convert_text_to_gutenberg
 from dictionaries.hi_security_dict import (
     CONVERSION_MODES,
     HI_SECURITY_MODE,
     NORMAL_MODE,
 )
-from dictionaries.html_dict import HTML_EXTENSIONS
-from dictionaries.markdown_dict import MARKDOWN_EXTENSIONS
-from dictionaries.text_dict import TEXT_EXTENSIONS
-
-SUPPORTED_FILE_TYPES: list[tuple[str, str]] = [
-    ("対応ファイル", "*.txt *.md *.markdown *.html *.htm"),
-    ("テキスト", "*.txt"),
-    ("Markdown", "*.md *.markdown"),
-    ("HTML", "*.html *.htm"),
-    ("すべてのファイル", "*.*"),
-]
+from file_checker import select_converter
+from gui_maker import run_gui
+from storage import read_load_file, write_save_file
 
 
 def convert_file(
@@ -45,36 +31,13 @@ def convert_file(
     if mode not in CONVERSION_MODES:
         raise ValueError(f"対応していない変換モードです: {mode}")
 
-    if not load_file_path.exists():
-        raise FileNotFoundError(f"読み込みファイルが見つかりません: {load_file_path}")
-
-    load_file: str = load_file_path.read_text(encoding="utf-8-sig")
-    converter: Callable[..., str] = _select_converter(load_file_path.suffix.lower())
+    load_file: str = read_load_file(load_file_path)
+    converter = select_converter(load_file_path)
     save_file: str = converter(load_file)
     if mode == HI_SECURITY_MODE:
         save_file = apply_hi_security_filter(save_file)
 
-    save_file_path.parent.mkdir(parents=True, exist_ok=True)
-    save_file_path.write_text(save_file, encoding="utf-8")
-
-
-def _select_converter(file_extension: str) -> Callable[..., str]:
-    if file_extension in TEXT_EXTENSIONS:
-        return convert_text_to_gutenberg
-    if file_extension in MARKDOWN_EXTENSIONS:
-        return convert_markdown_to_gutenberg
-    if file_extension in HTML_EXTENSIONS:
-        return convert_html_to_gutenberg
-
-    supported_extensions: list[str] = sorted(
-        TEXT_EXTENSIONS |
-        MARKDOWN_EXTENSIONS |
-        HTML_EXTENSIONS
-        )
-    raise ValueError(
-        "対応していないファイル形式です。"
-        f"対応拡張子: {', '.join(supported_extensions)}"
-    )
+    write_save_file(save_file_path, save_file)
 
 
 def main() -> None:
@@ -94,93 +57,11 @@ def main() -> None:
     args: argparse.Namespace = parser.parse_args()
 
     if args.gui or not args.load_file_path or not args.save_file_path:
-        run_gui()
+        run_gui(convert_file)
         return
 
     convert_file(args.load_file_path, args.save_file_path, mode=args.mode)
     print(f"変換が完了しました: {args.save_file_path}")
-
-
-def run_gui() -> None:
-    """ファイル選択画面からWordPress Gutenberg向けHTMLへ変換します。"""
-    root = tk.Tk()
-    root.withdraw()
-
-    mode: str = _select_mode_with_gui(root)
-    if not mode:
-        messagebox.showinfo("キャンセル", "変換をキャンセルしました。")
-        return
-
-    load_file_path: str = filedialog.askopenfilename(
-        title="変換したいファイルを選んでください",
-        filetypes=SUPPORTED_FILE_TYPES,
-    )
-    if not load_file_path:
-        messagebox.showinfo("キャンセル", "変換をキャンセルしました。")
-        return
-
-    default_save_file_path: Path = _create_default_save_file_path(load_file_path)
-    save_file_path: str = filedialog.asksaveasfilename(
-        title="変換後HTMLの保存先を選んでください",
-        defaultextension=".html",
-        initialfile=default_save_file_path.name,
-        initialdir=str(default_save_file_path.parent),
-        filetypes=[("HTML", "*.html"), ("すべてのファイル", "*.*")],
-    )
-    if not save_file_path:
-        messagebox.showinfo("キャンセル", "保存先が選ばれなかったため、変換をキャンセルしました。")
-        return
-
-    try:
-        convert_file(load_file_path, save_file_path, mode=mode)
-    except (ValueError, TypeError, PermissionError) as error:
-        messagebox.showerror("変換エラー", str(error))
-        return
-
-    messagebox.showinfo("変換完了", f"変換が完了しました。\n\n{save_file_path}")
-
-
-def _create_default_save_file_path(load_file_path: str | Path) -> Path:
-    load_file_path = Path(load_file_path)
-    return load_file_path.with_name(f"{load_file_path.stem}_wordpress.html")
-
-
-def _select_mode_with_gui(root: tk.Tk) -> str:
-    """GUIで変換モードを選びます。"""
-    selected_mode = tk.StringVar(value=NORMAL_MODE)
-    result: dict[str, str] = {"mode": ""}
-
-    mode_window = tk.Toplevel(root)
-    mode_window.title("変換モード")
-    mode_window.resizable(False, False)
-    mode_window.grab_set()
-
-    tk.Label(mode_window, text="変換モードを選んでください").pack(
-        padx=20,
-        pady=(16, 8),
-        anchor="w",
-    )
-    tk.Radiobutton(
-        mode_window,
-        text="Normal",
-        variable=selected_mode,
-        value=NORMAL_MODE,
-    ).pack(padx=24, anchor="w")
-    tk.Radiobutton(
-        mode_window,
-        text="企業向け安全モード",
-        variable=selected_mode,
-        value=HI_SECURITY_MODE,
-    ).pack(padx=24, anchor="w")
-
-    def decide_mode() -> None:
-        result["mode"] = selected_mode.get()
-        mode_window.destroy()
-
-    tk.Button(mode_window, text="OK", command=decide_mode).pack(pady=(8, 16))
-    mode_window.protocol("WM_DELETE_WINDOW", mode_window.destroy)
-    root.wait_window(mode_window)
-    return result["mode"]
 
 
 if __name__ == "__main__":

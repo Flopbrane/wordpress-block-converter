@@ -1,0 +1,98 @@
+"""GUI表示を担当するモジュールです。"""
+#########################
+# Author: F.Kurokawa
+# Description:
+#
+#########################
+from __future__ import annotations
+
+import tkinter as tk
+from collections.abc import Callable
+from pathlib import Path
+from tkinter import filedialog, messagebox
+
+from dictionaries.hi_security_dict import HI_SECURITY_MODE, NORMAL_MODE
+from file_checker import SUPPORTED_FILE_TYPES
+
+
+def run_gui(convert_file: Callable[[str | Path, str | Path, str], None]) -> None:
+    """ファイル選択画面からWordPress Gutenberg向けHTMLへ変換します。"""
+    root = tk.Tk()
+    root.withdraw()
+
+    mode: str = _select_mode_with_gui(root)
+    if not mode:
+        messagebox.showinfo("キャンセル", "変換をキャンセルしました。")
+        return
+
+    load_file_path: str = filedialog.askopenfilename(
+        title="変換したいファイルを選んでください",
+        filetypes=SUPPORTED_FILE_TYPES,
+    )
+    if not load_file_path:
+        messagebox.showinfo("キャンセル", "変換をキャンセルしました。")
+        return
+
+    default_save_file_path: Path = create_default_save_file_path(load_file_path)
+    save_file_path: str = filedialog.asksaveasfilename(
+        title="変換後HTMLの保存先を選んでください",
+        defaultextension=".html",
+        initialfile=default_save_file_path.name,
+        initialdir=str(default_save_file_path.parent),
+        filetypes=[("HTML", "*.html"), ("すべてのファイル", "*.*")],
+    )
+    if not save_file_path:
+        messagebox.showinfo("キャンセル", "保存先が選ばれなかったため、変換をキャンセルしました。")
+        return
+
+    try:
+        convert_file(load_file_path, save_file_path, mode)
+    except (ValueError, TypeError, PermissionError) as error:
+        messagebox.showerror("変換エラー", str(error))
+        return
+
+    messagebox.showinfo("変換完了", f"変換が完了しました。\n\n{save_file_path}")
+
+
+def create_default_save_file_path(load_file_path: str | Path) -> Path:
+    """変換後HTMLの標準保存先を作ります。"""
+    load_file_path = Path(load_file_path)
+    return load_file_path.with_name(f"{load_file_path.stem}_wordpress.html")
+
+
+def _select_mode_with_gui(root: tk.Tk) -> str:
+    """GUIで変換モードを選びます。"""
+    selected_mode = tk.StringVar(value=NORMAL_MODE)
+    result: dict[str, str] = {"mode": ""}
+
+    mode_window = tk.Toplevel(root)
+    mode_window.title("変換モード")
+    mode_window.resizable(False, False)
+    mode_window.grab_set()
+
+    tk.Label(mode_window, text="変換モードを選んでください").pack(
+        padx=20,
+        pady=(16, 8),
+        anchor="w",
+    )
+    tk.Radiobutton(
+        mode_window,
+        text="Normal",
+        variable=selected_mode,
+        value=NORMAL_MODE,
+    ).pack(padx=24, anchor="w")
+    tk.Radiobutton(
+        mode_window,
+        text="企業向け安全モード",
+        variable=selected_mode,
+        value=HI_SECURITY_MODE,
+    ).pack(padx=24, anchor="w")
+
+    def decide_mode() -> None:
+        result["mode"] = selected_mode.get()
+        mode_window.destroy()
+
+    tk.Button(mode_window, text="OK", command=decide_mode).pack(pady=(8, 16))
+    mode_window.protocol("WM_DELETE_WINDOW", mode_window.destroy)
+    root.wait_window(mode_window)
+    return result["mode"]
