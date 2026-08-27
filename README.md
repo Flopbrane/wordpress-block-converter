@@ -39,7 +39,7 @@ This tool is designed for users who prefer preparing stable WordPress block HTML
 | Ver.1.1 | Embed URLs, image/video/audio/file URLs, and Hi-Security Mode | Supported |
 | Ver.1.2 | Convert CSV / SSV / TSV / PSV into table blocks | Supported |
 | Ver.1.3 | Generate headings, paragraphs, lists, tables, and FAQ sections from JSON | Supported |
-| Ver.1.4 | Markdown custom layout syntax for image rows, media-text sections, CTA, FAQ, and card layouts | Planned |
+| Ver.1.4 | Markdown custom layout syntax for image rows, media-text sections, CTA, FAQ, and card layouts | In progress |
 
 ## Supported WordPress Blocks
 
@@ -87,6 +87,31 @@ Supported Markdown-style input includes:
 - Spacer marker: `[spacer]` or `[spacer:60]`
 - WordPress shortcodes: `[shortcode ...]`
 - Standalone URLs for embeds, media, and files
+
+#### Markdown Custom Layout Syntax
+
+Ver.1.4 treats content from `:::name` to `:::` as one layout instruction.
+
+Current or planned layout names include:
+
+- `:::image_text_left`: image on the left, text on the right
+- `:::image_text_right`: image on the right, text on the left
+- `:::image_row_3`: image row
+- `:::cta`: CTA heading, text, and button
+- `:::faq`: FAQ
+- `:::cards`: card-style layout
+
+Example:
+
+```markdown
+:::image_text_left
+image: https://example.com/service.jpg
+alt: Service image
+title: Our Service
+text: Add service description text here.
+width: 40
+:::
+```
 
 ### HTML
 
@@ -219,6 +244,7 @@ wp_converter/
 │  ├─ hi_security_filter.py
 │  ├─ html_converter.py
 │  ├─ json_converter.py
+│  ├─ markdown_layout_converter.py
 │  ├─ markdown_converter.py
 │  ├─ separated_values_converter.py
 │  ├─ text_converter.py
@@ -230,6 +256,7 @@ wp_converter/
 │  ├─ image.py
 │  ├─ inline.py
 │  ├─ list_block.py
+│  ├─ layout.py
 │  ├─ media.py
 │  ├─ paragraph.py
 │  ├─ quote.py

@@ -10,6 +10,7 @@ import re
 from collections.abc import Callable
 from typing import Any, cast
 
+from converters.markdown_layout_converter import convert_markdown_layout_to_gutenberg
 from blocks.paragraph import create_paragraph_block
 from dictionaries.html_dict import DIRECT_URL_RULES, EMBED_PROVIDER_RULES
 from dictionaries.markdown_dict import (
@@ -35,11 +36,39 @@ def convert_markdown_to_gutenberg(load_file: str) -> str:
     quote_lines: list[str] = []
     table_lines: list[str] = []
     code_lines: list[str] = []
+    layout_name: str = ""
+    layout_lines: list[str] = []
     in_code_block: bool = False
+    in_layout_block: bool = False
     heading_body_active: bool = False
 
     for line in load_file.splitlines():
         stripped_line: str = line.strip()
+
+        if stripped_line.startswith(":::") and not in_code_block:
+            if in_layout_block:
+                layout_block = convert_markdown_layout_to_gutenberg(layout_name, layout_lines)
+                if layout_block:
+                    blocks.append(layout_block)
+                layout_name = ""
+                layout_lines = []
+                in_layout_block = False
+            else:
+                _flush_paragraph(blocks, paragraph_lines)
+                paragraph_lines = []
+                _flush_list(blocks, list_items, list_ordered)
+                list_items = []
+                _flush_quote(blocks, quote_lines)
+                quote_lines = []
+                _flush_table(blocks, table_lines, paragraph_lines)
+                table_lines = []
+                layout_name = stripped_line.removeprefix(":::").strip()
+                in_layout_block = bool(layout_name)
+            continue
+
+        if in_layout_block:
+            layout_lines.append(line)
+            continue
 
         code_fence: str = str(MARKDOWN_CODE_RULE["fence"])
         if stripped_line.startswith(code_fence):
@@ -274,6 +303,11 @@ def convert_markdown_to_gutenberg(load_file: str) -> str:
             MARKDOWN_CODE_RULE["converter"],
         )
         blocks.append(code_converter("\n".join(code_lines)))
+
+    if in_layout_block:
+        layout_block = convert_markdown_layout_to_gutenberg(layout_name, layout_lines)
+        if layout_block:
+            blocks.append(layout_block)
 
     _flush_table(blocks, table_lines, paragraph_lines)
     _flush_paragraph(blocks, paragraph_lines)

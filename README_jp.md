@@ -41,7 +41,7 @@ WordPressの記事下書きを作るときに、手作業でブロックコメ�
 | Ver.1.1 | 埋め込みURL、画像、動画、音声、ファイルURL、Hi-Security Mode | 対応済み |
 | Ver.1.2 | CSV / SSV / TSV / PSVをtableブロックへ変換 | 対応済み |
 | Ver.1.3 | JSONから見出し、段落、リスト、表、FAQを生成 | 対応済み |
-| Ver.1.4 | Markdown独自レイアウト記法。画像横並び、画像＋文章、CTA、FAQ、カード型レイアウト | 予定 |
+| Ver.1.4 | Markdown独自レイアウト記法。画像横並び、画像＋文章、CTA、FAQ、カード型レイアウト | 着手中 |
 
 ## 対応しているWordPressブロック
 
@@ -89,6 +89,31 @@ WordPressの記事下書きを作るときに、手作業でブロックコメ�
 - 余白指定: `[spacer]` または `[spacer:60]`
 - WordPressショートコード: `[shortcode ...]`
 - 単独行のURL
+
+#### Markdown独自レイアウト記法
+
+Ver.1.4では、`:::名前` から `:::` までを1つのレイアウト指定として扱います。
+
+対応予定、または対応中の主な記法です。
+
+- `:::image_text_left`: 画像左、文章右
+- `:::image_text_right`: 画像右、文章左
+- `:::image_row_3`: 画像横並び
+- `:::cta`: CTA見出し、本文、ボタン
+- `:::faq`: FAQ
+- `:::cards`: カード型レイアウト
+
+例:
+
+```markdown
+:::image_text_left
+image: https://example.com/service.jpg
+alt: サービス紹介画像
+title: 私たちのサービス
+text: ここに説明文を入れます。
+width: 40
+:::
+```
 
 ### HTML
 
@@ -221,6 +246,7 @@ wp_converter/
 │  ├─ hi_security_filter.py
 │  ├─ html_converter.py
 │  ├─ json_converter.py
+│  ├─ markdown_layout_converter.py
 │  ├─ markdown_converter.py
 │  ├─ separated_values_converter.py
 │  ├─ text_converter.py
@@ -232,6 +258,7 @@ wp_converter/
 │  ├─ image.py
 │  ├─ inline.py
 │  ├─ list_block.py
+│  ├─ layout.py
 │  ├─ media.py
 │  ├─ paragraph.py
 │  ├─ quote.py
