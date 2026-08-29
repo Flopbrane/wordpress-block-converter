@@ -11,9 +11,9 @@ from pathlib import Path
 from converters.hi_security_filter import apply_hi_security_filter
 from dictionaries.hi_security_dict import (
     CONVERSION_MODES,
-    HI_SECURITY_MODE,
     NORMAL_MODE,
-    OFFICE_MODE,
+    SAFE_CONVERSION_MODES,
+    normalize_conversion_mode,
 )
 from file_checker import select_converter
 from gui_maker import run_gui
@@ -31,11 +31,12 @@ def convert_file(
 
     if mode not in CONVERSION_MODES:
         raise ValueError(f"対応していない変換モードです: {mode}")
+    normalized_mode = normalize_conversion_mode(mode)
 
     load_file: str = read_load_file(load_file_path)
     converter = select_converter(load_file_path)
     save_file: str = converter(load_file)
-    if mode in {HI_SECURITY_MODE, OFFICE_MODE}:
+    if normalized_mode in SAFE_CONVERSION_MODES:
         save_file = apply_hi_security_filter(save_file)
 
     write_save_file(save_file_path, save_file)

@@ -351,7 +351,7 @@ class WpHtmlTagLintParser(HTMLParser):
 
         self.issues.append(LintIssue(
             line_number,
-            f"<{tag}> はHi-Security / office modeでは危険扱いです。",
+            f"<{tag}> はmiddle / high-security modeでは危険扱いです。",
             f"<{tag}> を削除するか、安全なGutenberg標準ブロックへ置き換えてください。",
         ))
 

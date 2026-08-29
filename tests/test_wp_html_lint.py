@@ -71,9 +71,9 @@ def test_lint_reports_dangerous_tags_attributes_and_urls() -> None:
 
     issues = lint_wp_html(load_file)
 
-    assert any("<script> はHi-Security / office modeでは危険扱いです" in issue.message for issue in issues)
-    assert any("<iframe> はHi-Security / office modeでは危険扱いです" in issue.message for issue in issues)
-    assert any("<style> はHi-Security / office modeでは危険扱いです" in issue.message for issue in issues)
+    assert any("<script> はmiddle / high-security modeでは危険扱いです" in issue.message for issue in issues)
+    assert any("<iframe> はmiddle / high-security modeでは危険扱いです" in issue.message for issue in issues)
+    assert any("<style> はmiddle / high-security modeでは危険扱いです" in issue.message for issue in issues)
     assert any("属性 onclick" in issue.message for issue in issues)
     assert any("属性 style" in issue.message for issue in issues)
     assert any("危険なURL" in issue.message for issue in issues)
@@ -95,7 +95,7 @@ def test_lint_reports_office_blocked_tags() -> None:
 
     for tag_name in ("object", "embed", "form", "input", "button", "textarea", "select"):
         assert any(
-            f"<{tag_name}> はHi-Security / office modeでは危険扱いです" in issue.message
+            f"<{tag_name}> はmiddle / high-security modeでは危険扱いです" in issue.message
             for issue in issues
         )
 

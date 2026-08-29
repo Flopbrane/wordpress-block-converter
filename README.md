@@ -39,7 +39,7 @@ This tool is designed for users who prefer preparing stable WordPress block HTML
 | Version | Support | Status |
 | ------- | ------- | ------ |
 | Ver.1.0 | Basic plain text, Markdown, and HTML conversion | Supported |
-| Ver.1.1 | Embed URLs, image/video/audio/file URLs, and Hi-Security / office mode | Supported |
+| Ver.1.1 | Embed URLs, image/video/audio/file URLs, and three conversion modes | Supported |
 | Ver.1.2 | Convert CSV / SSV / TSV / PSV into table blocks | Supported |
 | Ver.1.3 | Generate headings, paragraphs, lists, tables, and FAQ sections from JSON | Supported |
 | Ver.1.4 | Markdown custom layout syntax for image rows, media-text sections, CTA, FAQ, and card layouts | In progress |
@@ -52,7 +52,7 @@ This tool is designed for users who prefer preparing stable WordPress block HTML
 | -------------------- | ---------------------- |
 | Paragraph            | `core/paragraph`       |
 | Heading              | `core/heading`         |
-| List                 | `core/html` by default |
+| List                 | `core/list`            |
 | Code                 | `core/code`            |
 | Quote                | `core/quote`           |
 | Spacer               | `core/spacer`          |
@@ -256,15 +256,19 @@ Use `--mode` to switch output rules.
 
 | Mode | Purpose |
 | ---- | ------- |
-| `normal` | Standard conversion. Keeps the existing output behavior. |
-| `hi-security` | Safer output that avoids CSS and dangerous tags. |
-| `office` | Office WordPress output. It normalizes h1 to h2 for article bodies, writes heading levels explicitly, and removes dangerous HTML. |
+| `normal` | Standard conversion. Keeps the existing HTML, Markdown, and embed behavior. |
+| `middle` | Office WordPress output. It normalizes h1 to h2 for article bodies, writes heading levels explicitly, and removes dangerous HTML. |
+| `high-security` | High-restriction output. It avoids CSS, dangerous tags, and dangerous attributes for safer saving in WordPress. |
 
 ```powershell
-python .\main.py .\sample.md .\sample_wordpress.html --mode office
+python .\main.py .\sample.md .\sample_wordpress.html --mode middle
 ```
 
-In `hi-security` and `office` modes, `\\` with whitespace on both sides is treated as an explicit in-paragraph line break and converted to `<br><br>`. Backslashes attached to text, such as Windows paths like `C:\Users\...`, are left unchanged to avoid breaking paths.
+For compatibility, the old `office` mode works the same as `middle`, and the old `hi-security` mode works the same as `high-security`.
+
+In `middle`, `high-security`, `office`, and `hi-security` modes, `\\` with whitespace on both sides is treated as an explicit in-paragraph line break and converted to `<br><br>`. Backslashes attached to text, such as Windows paths like `C:\Users\...`, are left unchanged to avoid breaking paths.
+
+For office WordPress output, the converter prefers WordPress core block comments such as `<!-- wp:paragraph -->`, `<!-- wp:heading -->`, `<!-- wp:list -->`, and `<!-- wp:table -->` instead of relying on free-form HTML alone.
 
 ### WP HTML lint
 

@@ -41,7 +41,7 @@ WordPressの記事下書きを作るときに、手作業でブロックコメ�
 | バージョン | 対応内容 | 状態 |
 |---|---|---|
 | Ver.1.0 | 平文、Markdown、HTMLの基本変換 | 対応済み |
-| Ver.1.1 | 埋め込みURL、画像、動画、音声、ファイルURL、Hi-Security / office mode | 対応済み |
+| Ver.1.1 | 埋め込みURL、画像、動画、音声、ファイルURL、3段階変換モード | 対応済み |
 | Ver.1.2 | CSV / SSV / TSV / PSVをtableブロックへ変換 | 対応済み |
 | Ver.1.3 | JSONから見出し、段落、リスト、表、FAQを生成 | 対応済み |
 | Ver.1.4 | Markdown独自レイアウト記法。画像横並び、画像＋文章、CTA、FAQ、カード型レイアウト | 着手中 |
@@ -54,7 +54,7 @@ WordPressの記事下書きを作るときに、手作業でブロックコメ�
 |---|---|
 | 段落 | `core/paragraph` |
 | 見出し | `core/heading` |
-| リスト | 基本は `core/html` |
+| リスト | `core/list` |
 | コード | `core/code` |
 | 引用 | `core/quote` |
 | 余白 | `core/spacer` |
@@ -258,15 +258,19 @@ python .\main.py .\sample.md .\sample_wordpress.html
 
 | モード | 用途 |
 |---|---|
-| `normal` | 通常変換。既存の出力を優先します。 |
-| `hi-security` | CSSや危険タグを避けた安全寄りの出力にします。 |
-| `office` | 事業所WordPress向け。本文向けにh1をh2へ丸め、見出しlevelを明記し、危険HTMLを除去します。 |
+| `normal` | 通常変換。HTML、Markdown、埋め込みなど既存の出力を優先します。 |
+| `middle` | 事業所WordPress向け。記事本文で崩れにくいように、h1をh2へ丸め、見出しlevelを明記し、危険HTMLを除去します。 |
+| `high-security` | 高制限向け。CSS、危険タグ、危険属性を避け、WordPress保存後に崩れにくい安全寄りの出力にします。 |
 
 ```powershell
-python .\main.py .\sample.md .\sample_wordpress.html --mode office
+python .\main.py .\sample.md .\sample_wordpress.html --mode middle
 ```
 
-`hi-security` と `office` では、前後が空白の `\\` を明示的な段落内改行として `<br><br>` に変換します。Windowsパスの `C:\Users\...` のように文字へくっついているバックスラッシュは、パスを壊さないように置換しません。
+互換性のため、旧名の `office` は `middle` と同じ動き、`hi-security` は `high-security` と同じ動きとして使えます。
+
+`middle`、`high-security`、`office`、`hi-security` では、前後が空白の `\\` を明示的な段落内改行として `<br><br>` に変換します。Windowsパスの `C:\Users\...` のように文字へくっついているバックスラッシュは、パスを壊さないように置換しません。
+
+事業所WP向けの出力では、HTMLだけで表や箇条書きを組み立てるよりも、`<!-- wp:paragraph -->`、`<!-- wp:heading -->`、`<!-- wp:list -->`、`<!-- wp:table -->` のようなWordPressコアブロックコメントで囲む方針を優先します。
 
 ### WP HTML lint
 

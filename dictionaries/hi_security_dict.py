@@ -7,10 +7,37 @@
 from __future__ import annotations
 
 NORMAL_MODE = "normal"
+MIDDLE_MODE = "middle"
+HIGH_SECURITY_MODE = "high-security"
 HI_SECURITY_MODE = "hi-security"
 OFFICE_MODE = "office"
-SAFE_CONVERSION_MODES: tuple[str, str] = (HI_SECURITY_MODE, OFFICE_MODE)
-CONVERSION_MODES: tuple[str, str, str] = (NORMAL_MODE, HI_SECURITY_MODE, OFFICE_MODE)
+SAFE_CONVERSION_MODES: tuple[str, ...] = (
+    MIDDLE_MODE,
+    HIGH_SECURITY_MODE,
+    HI_SECURITY_MODE,
+    OFFICE_MODE,
+)
+CONVERSION_MODES: tuple[str, ...] = (
+    NORMAL_MODE,
+    MIDDLE_MODE,
+    HIGH_SECURITY_MODE,
+    HI_SECURITY_MODE,
+    OFFICE_MODE,
+)
+DISPLAY_CONVERSION_MODES: tuple[str, ...] = (
+    NORMAL_MODE,
+    MIDDLE_MODE,
+    HIGH_SECURITY_MODE,
+)
+MODE_ALIASES: dict[str, str] = {
+    HI_SECURITY_MODE: HIGH_SECURITY_MODE,
+    OFFICE_MODE: MIDDLE_MODE,
+}
+
+
+def normalize_conversion_mode(mode: str) -> str:
+    """古いモード名を、現在の3段階モード名へ寄せます。"""
+    return MODE_ALIASES.get(mode, mode)
 
 TEXT_TAGS: tuple[str, ...] = ("p", "h2", "h3", "h4", "h5", "strong", "em", "br", "hr")
 LIST_TAGS: tuple[str, ...] = ("ul", "ol", "li")

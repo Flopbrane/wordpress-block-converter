@@ -35,6 +35,23 @@ def test_convert_file_applies_hi_security_mode(tmp_path: Path) -> None:
     assert '<a href="https://www.youtube.com/watch?v=abc">' in save_file
 
 
+def test_convert_file_applies_high_security_mode_alias(tmp_path: Path) -> None:
+    """high-securityでも安全化フィルターを通すテストです。"""
+    load_file_path = tmp_path / "sample.md"
+    save_file_path = tmp_path / "sample_safe_wordpress.html"
+    load_file_path.write_text(
+        "# タイトル\n\nhttps://www.youtube.com/watch?v=abc",
+        encoding="utf-8",
+    )
+
+    convert_file(load_file_path, save_file_path, mode="high-security")
+
+    save_file = save_file_path.read_text(encoding="utf-8")
+    assert "<!-- wp:embed" not in save_file
+    assert '<!-- wp:heading {"level":2} -->' in save_file
+    assert '<h2 class="wp-block-heading">タイトル</h2>' in save_file
+
+
 def test_convert_file_keeps_normal_mode_output(tmp_path: Path) -> None:
     """normalではHi-Securityフィルターを通さないテストです。"""
     load_file_path = tmp_path / "sample.md"
@@ -141,6 +158,24 @@ def test_convert_file_applies_office_mode_like_hi_security(tmp_path: Path) -> No
     assert "<code>&lt;h2&gt;見出し&lt;/h2&gt;</code>" in save_file
     assert "<!-- wp:table -->" in save_file
     assert '<figure class="wp-block-table">' in save_file
+
+
+def test_convert_file_applies_middle_mode_like_office(tmp_path: Path) -> None:
+    """middle modeでも事業所WP向け安全化フィルターを通すテストです。"""
+    load_file_path = tmp_path / "middle.md"
+    save_file_path = tmp_path / "middle_wordpress.html"
+    load_file_path.write_text(
+        "# 大きな区切り\n\n"
+        "本文です。\n",
+        encoding="utf-8",
+    )
+
+    convert_file(load_file_path, save_file_path, mode="middle")
+
+    save_file = save_file_path.read_text(encoding="utf-8")
+    assert '<!-- wp:heading {"level":2} -->' in save_file
+    assert '<h2 class="wp-block-heading">大きな区切り</h2>' in save_file
+    assert "<!-- wp:paragraph -->" in save_file
 
 
 def test_convert_file_office_mode_removes_dangerous_html(tmp_path: Path) -> None:
