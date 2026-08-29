@@ -184,6 +184,25 @@ def test_apply_hi_security_filter_adds_heading_level_to_h2() -> None:
     assert '<h2 class="wp-block-heading">見出し</h2>' in save_file
 
 
+def test_apply_hi_security_filter_adds_heading_class_to_h2_and_h3() -> None:
+    """h2/h3にwp-block-heading classを補うテストです。"""
+    load_file = (
+        "<!-- wp:heading -->\n"
+        "<h2>大きな区切り</h2>\n"
+        "<!-- /wp:heading -->\n"
+        '<!-- wp:heading {"level":3} -->\n'
+        "<h3>文章内の小見出し</h3>\n"
+        "<!-- /wp:heading -->"
+    )
+
+    save_file = apply_hi_security_filter(load_file)
+
+    assert '<!-- wp:heading {"level":2} -->' in save_file
+    assert '<h2 class="wp-block-heading">大きな区切り</h2>' in save_file
+    assert '<!-- wp:heading {"level":3} -->' in save_file
+    assert '<h3 class="wp-block-heading">文章内の小見出し</h3>' in save_file
+
+
 def test_apply_hi_security_filter_normalizes_h1_and_h6_headings() -> None:
     """本文用にh1はh2へ、h6はh5へ寄せるテストです。"""
     load_file = (
@@ -260,3 +279,30 @@ def test_apply_hi_security_filter_removes_css_from_lp_html() -> None:
     assert "style=" not in save_file
     assert "<p>サービス紹介</p>" in save_file
     assert '<img src="https://example.com/service.jpg" alt="サービス">' in save_file
+
+
+def test_apply_hi_security_filter_replaces_explicit_line_break_mark() -> None:
+    """前後が空白の明示的な\\だけを段落内br2つへ置換するテストです。"""
+    load_file = (
+        "<!-- wp:paragraph -->\n"
+        "<p>一行目 \\\\ 二行目</p>\n"
+        "<!-- /wp:paragraph -->"
+    )
+
+    save_file = apply_hi_security_filter(load_file)
+
+    assert "<p>一行目 <br><br> 二行目</p>" in save_file
+
+
+def test_apply_hi_security_filter_keeps_windows_path_backslashes() -> None:
+    """Windowsパスのバックスラッシュをbrに変えないテストです。"""
+    load_file = (
+        "<!-- wp:paragraph -->\n"
+        r"<p>保存先は C:\Users\sample\article.html です。</p>"
+        "\n<!-- /wp:paragraph -->"
+    )
+
+    save_file = apply_hi_security_filter(load_file)
+
+    assert r"C:\Users\sample\article.html" in save_file
+    assert "<br><br>" not in save_file

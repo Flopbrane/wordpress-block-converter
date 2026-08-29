@@ -19,6 +19,7 @@ This tool is designed for users who prefer preparing stable WordPress block HTML
 - Insert a 24px spacer between plain text paragraphs
 - Choose files with a simple GUI
 - Run from the command line when needed
+- Check converted WordPress block HTML with `wp_html_lint`
 - Uses only the Python standard library
 
 ## Supported Input Files
@@ -36,10 +37,11 @@ This tool is designed for users who prefer preparing stable WordPress block HTML
 | Version | Support | Status |
 | ------- | ------- | ------ |
 | Ver.1.0 | Basic plain text, Markdown, and HTML conversion | Supported |
-| Ver.1.1 | Embed URLs, image/video/audio/file URLs, and Hi-Security Mode | Supported |
+| Ver.1.1 | Embed URLs, image/video/audio/file URLs, and Hi-Security / office mode | Supported |
 | Ver.1.2 | Convert CSV / SSV / TSV / PSV into table blocks | Supported |
 | Ver.1.3 | Generate headings, paragraphs, lists, tables, and FAQ sections from JSON | Supported |
 | Ver.1.4 | Markdown custom layout syntax for image rows, media-text sections, CTA, FAQ, and card layouts | In progress |
+| Ver.1.5 | wp_html_lint for block comments, heading levels, tables, links, and images | Supported |
 
 ## Supported WordPress Blocks
 
@@ -199,6 +201,45 @@ python .\main.py
 python .\main.py .\sample.md .\sample_wordpress.html
 ```
 
+### Conversion Modes
+
+Use `--mode` to switch output rules.
+
+| Mode | Purpose |
+| ---- | ------- |
+| `normal` | Standard conversion. Keeps the existing output behavior. |
+| `hi-security` | Safer output that avoids CSS and dangerous tags. |
+| `office` | Office WordPress output. It normalizes h1 to h2 for article bodies, writes heading levels explicitly, and removes dangerous HTML. |
+
+```powershell
+python .\main.py .\sample.md .\sample_wordpress.html --mode office
+```
+
+In `hi-security` and `office` modes, `\\` with whitespace on both sides is treated as an explicit in-paragraph line break and converted to `<br><br>`. Backslashes attached to text, such as Windows paths like `C:\Users\...`, are left unchanged to avoid breaking paths.
+
+### WP HTML lint
+
+You can check converted WordPress block HTML files.
+
+```powershell
+python -m wp_converter.lint path\to\file.wp_html
+```
+
+It checks:
+
+- Matching `<!-- wp:paragraph -->` and `<!-- /wp:paragraph -->`
+- `<p>` and `</p>` inside paragraph blocks
+- Heading block `level` matching the HTML heading tag from `<h2>` to `<h5>`
+- `<figure class="wp-block-table">` and `<table>` inside table blocks
+- `href` on `<a>` tags
+- `rel="noopener"` when `target="_blank"` is used
+- `src` and `alt` on `<img>` tags
+- Empty paragraph blocks. `<p></p>` and similar blocks are reported as `paragraph ブロックが空です。`.
+- Nested HTML tag mistakes such as `<p><strong>text</p>`
+- Dangerous HTML such as `script`, `iframe`, `style`, `onclick`, and `javascript:`
+
+When issues are found, it prints the line number, problem, and fix hint.
+
 ## Example
 
 Input Markdown:
@@ -239,6 +280,7 @@ wp_converter/
 ├─ storage.py
 ├─ file_checker.py
 ├─ gui_maker.py
+├─ lint.py
 ├─ converters/
 │  ├─ document_converter.py
 │  ├─ hi_security_filter.py
@@ -281,6 +323,7 @@ The project keeps each responsibility small:
 - `storage.py` reads source files and writes converted files
 - `file_checker.py` checks supported extensions and selects converters
 - `gui_maker.py` handles GUI windows and file selection
+- `lint.py` checks WordPress block HTML for common issues
 - `converters/` converts each input format
 - `blocks/` creates WordPress block HTML
 - `dictionaries/` stores conversion rules and patterns

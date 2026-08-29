@@ -21,6 +21,7 @@ WordPressの記事下書きを作るときに、手作業でブロックコメ�
 - 平文の段落間に24pxの余白ブロックを挿入
 - GUIでload_fileとsave_fileを選択
 - コマンドラインからも実行可能
+- `wp_html_lint` でWordPressブロックHTMLの閉じ忘れや属性不足を確認
 - Python標準ライブラリのみで動作
 
 ## 対応しているload_file
@@ -38,10 +39,11 @@ WordPressの記事下書きを作るときに、手作業でブロックコメ�
 | バージョン | 対応内容 | 状態 |
 |---|---|---|
 | Ver.1.0 | 平文、Markdown、HTMLの基本変換 | 対応済み |
-| Ver.1.1 | 埋め込みURL、画像、動画、音声、ファイルURL、Hi-Security Mode | 対応済み |
+| Ver.1.1 | 埋め込みURL、画像、動画、音声、ファイルURL、Hi-Security / office mode | 対応済み |
 | Ver.1.2 | CSV / SSV / TSV / PSVをtableブロックへ変換 | 対応済み |
 | Ver.1.3 | JSONから見出し、段落、リスト、表、FAQを生成 | 対応済み |
 | Ver.1.4 | Markdown独自レイアウト記法。画像横並び、画像＋文章、CTA、FAQ、カード型レイアウト | 着手中 |
+| Ver.1.5 | wp_html_lint。ブロックコメント、見出しlevel、表、リンク、画像の簡易チェック | 対応済み |
 
 ## 対応しているWordPressブロック
 
@@ -201,6 +203,45 @@ python .\main.py .\sample.md .\sample_wordpress.html
 
 `load_file_path` と `save_file_path` を指定して変換します。
 
+### 変換モード
+
+`--mode` で出力ルールを切り替えられます。
+
+| モード | 用途 |
+|---|---|
+| `normal` | 通常変換。既存の出力を優先します。 |
+| `hi-security` | CSSや危険タグを避けた安全寄りの出力にします。 |
+| `office` | 事業所WordPress向け。本文向けにh1をh2へ丸め、見出しlevelを明記し、危険HTMLを除去します。 |
+
+```powershell
+python .\main.py .\sample.md .\sample_wordpress.html --mode office
+```
+
+`hi-security` と `office` では、前後が空白の `\\` を明示的な段落内改行として `<br><br>` に変換します。Windowsパスの `C:\Users\...` のように文字へくっついているバックスラッシュは、パスを壊さないように置換しません。
+
+### WP HTML lint
+
+変換済みのWordPressブロックHTMLを確認できます。
+
+```powershell
+python -m wp_converter.lint path\to\file.wp_html
+```
+
+主に次を確認します。
+
+- `<!-- wp:paragraph -->` と `<!-- /wp:paragraph -->` の対応
+- paragraph ブロック内の `<p>` と `</p>`
+- heading ブロックコメントの `level` と `<h2>` から `<h5>` の一致
+- table ブロック内の `<figure class="wp-block-table">` と `<table>`
+- `<a>` タグの `href`
+- `target="_blank"` 時の `rel="noopener"`
+- `<img>` タグの `src` と `alt`
+- 空の paragraph ブロック。`<p></p>` などは `paragraph ブロックが空です。` と表示します。
+- `<p><strong>本文</p>` のようなHTMLタグの入れ子ミス
+- `script`、`iframe`、`style`、`onclick`、`javascript:` などの危険なHTML
+
+問題がある場合は、行番号、問題内容、修正ヒントを表示します。
+
 ## 変換例
 
 入力Markdown:
@@ -241,6 +282,7 @@ wp_converter/
 ├─ storage.py
 ├─ file_checker.py
 ├─ gui_maker.py
+├─ lint.py
 ├─ converters/
 │  ├─ document_converter.py
 │  ├─ hi_security_filter.py
@@ -283,6 +325,7 @@ wp_converter/
 | `storage.py` | load_fileの読み込み、save_fileの保存 |
 | `file_checker.py` | 対応拡張子の確認、converter選択 |
 | `gui_maker.py` | GUI表示、ファイル選択画面 |
+| `lint.py` | WordPressブロックHTMLの簡易チェック |
 | `converters/` | 入力形式ごとの変換処理 |
 | `blocks/` | WordPressブロックHTMLを作る部品 |
 | `dictionaries/` | 変換ルール、正規表現、対応拡張子 |

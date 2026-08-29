@@ -13,6 +13,7 @@ from dictionaries.hi_security_dict import (
     CONVERSION_MODES,
     HI_SECURITY_MODE,
     NORMAL_MODE,
+    OFFICE_MODE,
 )
 from file_checker import select_converter
 from gui_maker import run_gui
@@ -34,7 +35,7 @@ def convert_file(
     load_file: str = read_load_file(load_file_path)
     converter = select_converter(load_file_path)
     save_file: str = converter(load_file)
-    if mode == HI_SECURITY_MODE:
+    if mode in {HI_SECURITY_MODE, OFFICE_MODE}:
         save_file = apply_hi_security_filter(save_file)
 
     write_save_file(save_file_path, save_file)

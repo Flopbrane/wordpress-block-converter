@@ -11,7 +11,7 @@ from collections.abc import Callable
 from pathlib import Path
 from tkinter import filedialog, messagebox
 
-from dictionaries.hi_security_dict import HI_SECURITY_MODE, NORMAL_MODE
+from dictionaries.hi_security_dict import HI_SECURITY_MODE, NORMAL_MODE, OFFICE_MODE
 from file_checker import SUPPORTED_FILE_TYPES
 
 
@@ -86,6 +86,12 @@ def _select_mode_with_gui(root: tk.Tk) -> str:
         text="企業向け安全モード",
         variable=selected_mode,
         value=HI_SECURITY_MODE,
+    ).pack(padx=24, anchor="w")
+    tk.Radiobutton(
+        mode_window,
+        text="事業所WP向けモード",
+        variable=selected_mode,
+        value=OFFICE_MODE,
     ).pack(padx=24, anchor="w")
 
     def decide_mode() -> None:

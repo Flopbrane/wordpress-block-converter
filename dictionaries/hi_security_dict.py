@@ -8,7 +8,9 @@ from __future__ import annotations
 
 NORMAL_MODE = "normal"
 HI_SECURITY_MODE = "hi-security"
-CONVERSION_MODES: tuple[str, str] = (NORMAL_MODE, HI_SECURITY_MODE)
+OFFICE_MODE = "office"
+SAFE_CONVERSION_MODES: tuple[str, str] = (HI_SECURITY_MODE, OFFICE_MODE)
+CONVERSION_MODES: tuple[str, str, str] = (NORMAL_MODE, HI_SECURITY_MODE, OFFICE_MODE)
 
 TEXT_TAGS: tuple[str, ...] = ("p", "h2", "h3", "h4", "h5", "strong", "em", "br", "hr")
 LIST_TAGS: tuple[str, ...] = ("ul", "ol", "li")

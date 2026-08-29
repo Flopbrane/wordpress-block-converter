@@ -37,6 +37,14 @@ PARAGRAPH_SEPARATOR_PATTERN: re.Pattern[str] = re.compile(
     PARAGRAPH_SEPARATOR_PATTERN_TEXT,
     re.IGNORECASE | re.DOTALL,
 )
+UNSAFE_MARKDOWN_LINK_PATTERN: re.Pattern[str] = re.compile(
+    r"\[[^\]]+\]\(\s*(?:javascript|data|vbscript):[^)]*\)",
+    re.IGNORECASE,
+)
+EXPLICIT_LINE_BREAK_PATTERN: re.Pattern[str] = re.compile(
+    r"(^|\s)\\\\(\s|$)",
+    re.MULTILINE,
+)
 HEADING_BLOCK_PATTERN: re.Pattern[str] = re.compile(
     r"<!--\s*wp:heading\b[^>]*-->\s*"
     r"<h([1-6])(\s[^>]*)?>(.*?)</h\1>\s*"
@@ -58,6 +66,8 @@ HEADING_LEVEL_MAP: dict[str, str] = {
 
 def apply_hi_security_filter(save_file: str) -> str:
     """変換後HTMLを、制限の強いWordPress向けの安全HTMLに整えます。"""
+    save_file = EXPLICIT_LINE_BREAK_PATTERN.sub(r"\1<br><br>\2", save_file)
+    save_file = UNSAFE_MARKDOWN_LINK_PATTERN.sub("", save_file)
     save_file = EMBED_BLOCK_PATTERN.sub(_convert_embed_block_to_link, save_file)
     save_file = HEADING_BLOCK_PATTERN.sub(_normalize_heading_block, save_file)
     save_file = PARAGRAPH_SEPARATOR_PATTERN.sub(_create_separator_block, save_file)
@@ -80,7 +90,7 @@ def _convert_embed_block_to_link(embed_match: re.Match[str]) -> str:
 
 def _normalize_heading_block(heading_match: re.Match[str]) -> str:
     heading_level = _normalize_heading_level(int(heading_match.group(1)))
-    attrs = heading_match.group(2) or ""
+    attrs = _normalize_heading_attrs(heading_match.group(2) or "")
     heading_text = heading_match.group(3)
     return (
         f'<!-- wp:heading {{"level":{heading_level}}} -->\n'
@@ -95,6 +105,23 @@ def _normalize_heading_level(level: int) -> int:
     if level >= 5:
         return 5
     return level
+
+
+def _normalize_heading_attrs(attrs: str) -> str:
+    if not attrs.strip():
+        return ' class="wp-block-heading"'
+
+    class_match = re.search(r'class\s*=\s*["\']([^"\']*)["\']', attrs, re.IGNORECASE)
+    if not class_match:
+        return f'{attrs} class="wp-block-heading"'
+
+    class_values = class_match.group(1).split()
+    if "wp-block-heading" in class_values:
+        return attrs
+
+    class_values.append("wp-block-heading")
+    new_class = f'class="{" ".join(class_values)}"'
+    return attrs[:class_match.start()] + new_class + attrs[class_match.end():]
 
 
 def _create_separator_block(_separator_match: re.Match[str]) -> str:
