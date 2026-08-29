@@ -13,6 +13,11 @@ from dataclasses import dataclass
 from html.parser import HTMLParser
 from pathlib import Path
 
+try:
+    from .dictionaries.hi_security_dict import BLOCKED_TAGS
+except ImportError:
+    from dictionaries.hi_security_dict import BLOCKED_TAGS
+
 
 @dataclass
 class LintIssue:
@@ -44,7 +49,6 @@ TABLE_FIGURE_PATTERN: re.Pattern[str] = re.compile(
 TABLE_TAG_PATTERN: re.Pattern[str] = re.compile(r"<table\b[^>]*>", re.IGNORECASE)
 
 VOID_TAGS: set[str] = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta"}
-BLOCKED_TAGS: set[str] = {"script", "iframe", "style"}
 BLOCKED_ATTRIBUTES: set[str] = {
     "onclick",
     "onload",

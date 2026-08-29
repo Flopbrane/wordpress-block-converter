@@ -79,6 +79,27 @@ def test_lint_reports_dangerous_tags_attributes_and_urls() -> None:
     assert any("危険なURL" in issue.message for issue in issues)
 
 
+def test_lint_reports_office_blocked_tags() -> None:
+    """事業所WP向けに危険扱いするタグを警告するテストです。"""
+    load_file = (
+        '<object data="sample.swf"></object>\n'
+        '<embed src="sample.swf">\n'
+        '<form action="/send"></form>\n'
+        '<input type="text">\n'
+        '<button>送信</button>\n'
+        '<textarea>本文</textarea>\n'
+        '<select><option>項目</option></select>\n'
+    )
+
+    issues = lint_wp_html(load_file)
+
+    for tag_name in ("object", "embed", "form", "input", "button", "textarea", "select"):
+        assert any(
+            f"<{tag_name}> はHi-Security / office modeでは危険扱いです" in issue.message
+            for issue in issues
+        )
+
+
 def test_lint_reports_heading_level_mismatch() -> None:
     """headingのlevelとHTML見出しタグ不一致を検出するテストです。"""
     load_file = (

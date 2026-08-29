@@ -11,6 +11,7 @@ WordPressの記事下書きを作るときに、手作業でブロックコメ�
 ## できること
 
 - 平文 `.txt` を段落ブロックへ変換
+- WP-TXT `.wp_txt` を見出し、本文、リスト、引用、コード、表、画像などへ変換
 - Markdownの見出し、本文、リスト、引用、コード、表、区切り線、画像、ショートコードを変換
 - HTMLの見出し、段落、リスト、引用、コード、表、画像、リンク、ショートコードを変換
 - CSV/SSV/TSV/PSVなどの区切り値ファイルを表ブロックへ変換
@@ -29,6 +30,7 @@ WordPressの記事下書きを作るときに、手作業でブロックコメ�
 | 種類 | 拡張子 |
 |---|---|
 | 平文 | `.txt` |
+| WP-TXT | `.wp_txt`, `.wptxt` |
 | Markdown | `.md`, `.markdown` |
 | HTML | `.html`, `.htm` |
 | 区切り値ファイル | `.csv`, `.ssv`, `.tsv`, `.psv`, `.pipesv` |
@@ -44,6 +46,7 @@ WordPressの記事下書きを作るときに、手作業でブロックコメ�
 | Ver.1.3 | JSONから見出し、段落、リスト、表、FAQを生成 | 対応済み |
 | Ver.1.4 | Markdown独自レイアウト記法。画像横並び、画像＋文章、CTA、FAQ、カード型レイアウト | 着手中 |
 | Ver.1.5 | wp_html_lint。ブロックコメント、見出しlevel、表、リンク、画像の簡易チェック | 対応済み |
+| Ver.1.6 | WP-TXT記法。平文に少し印を足して見出し、リスト、引用、コード、表、画像を安定変換 | 対応済み |
 
 ## 対応しているWordPressブロック
 
@@ -72,6 +75,52 @@ WordPressの記事下書きを作るときに、手作業でブロックコメ�
 - 空行で段落を分けます。
 - 段落内の改行は `<br><br>` に変換します。
 - 段落と段落の間には24pxのspacerブロックを入れます。
+
+### WP-TXT
+
+`.txt` より少しだけ印を増やした、記事作成向けの記法です。
+
+| 書き方 | 変換先 |
+|---|---|
+| `【見出し】` | h2見出し |
+| `《小見出し》` | h3見出し |
+| 空行 | 段落区切り |
+| `・項目` | 箇条書き |
+| `1. 項目` | 番号付きリスト |
+| `> 引用文` | 引用 |
+| `---` | 区切り線 |
+| `[余白:50]` | 50pxの余白 |
+| `[リンク:表示文字|URL]` | リンク |
+| `[画像:URL|代替テキスト]` | 画像 |
+| `[コード]` から `[/コード]` | コードブロック |
+| `[表]` から `[/表]` | 表 |
+
+例:
+
+```text
+【WordPressとは】
+
+WordPressは、ホームページやブログを作るための仕組みです。
+
+《できること》
+
+・記事を書く
+・画像を入れる
+・表を作る
+
+詳しくは [リンク:公式サイト|https://example.com/] をご覧ください。
+
+[画像:https://example.com/image.jpg|説明画像]
+
+[コード]
+<p>これは段落です。</p>
+[/コード]
+
+[表]
+項目|説明
+h2|大きな区切り
+[/表]
+```
 
 ### Markdown
 
@@ -223,9 +272,27 @@ python .\main.py .\sample.md .\sample_wordpress.html --mode office
 
 変換済みのWordPressブロックHTMLを確認できます。
 
+PowerShellでプロジェクトフォルダへ移動してから実行するのがおすすめです。
+
 ```powershell
-python -m wp_converter.lint path\to\file.wp_html
+cd D:\PC\Python\wp_converter
+python .\lint.py .\sample_wordpress.html
 ```
+
+`.wp_html` ファイルを確認する場合:
+
+```powershell
+python .\lint.py .\your_article.wp_html
+```
+
+`python -m` で実行する場合は、1つ上のフォルダから実行します。
+
+```powershell
+cd D:\PC\Python
+python -m wp_converter.lint .\wp_converter\your_article.wp_html
+```
+
+`D:\PC\Python\wp_converter\dictionaries` など別フォルダにいる場合は、先に `D:\PC\Python\wp_converter` へ戻ってから実行してください。
 
 主に次を確認します。
 
@@ -292,6 +359,7 @@ wp_converter/
 │  ├─ markdown_converter.py
 │  ├─ separated_values_converter.py
 │  ├─ text_converter.py
+│  ├─ wp_txt_converter.py
 ├─ blocks/
 │  ├─ code.py
 │  ├─ embed.py
@@ -314,7 +382,8 @@ wp_converter/
    ├─ json_dict.py
    ├─ markdown_dict.py
    ├─ separated_values_dict.py
-   └─ text_dict.py
+   ├─ text_dict.py
+   └─ wp_txt_dict.py
 ```
 
 ## 各フォルダの役割

@@ -97,6 +97,26 @@ def test_convert_file_supports_json_sections(tmp_path: Path) -> None:
     assert "<p>本文です。</p>" in save_file
 
 
+def test_convert_file_supports_wp_txt(tmp_path: Path) -> None:
+    """WP-TXTファイルを見出し・リストへ変換するテストです。"""
+    load_file_path = tmp_path / "sample.wp_txt"
+    save_file_path = tmp_path / "sample_wordpress.html"
+    load_file_path.write_text(
+        "【サービス紹介】\n\n"
+        "本文です。\n\n"
+        "・相談\n"
+        "・制作\n",
+        encoding="utf-8",
+    )
+
+    convert_file(load_file_path, save_file_path)
+
+    save_file = save_file_path.read_text(encoding="utf-8")
+    assert '<h2 class="wp-block-heading">サービス紹介</h2>' in save_file
+    assert "<p>本文です。</p>" in save_file
+    assert "<li>相談</li>" in save_file
+
+
 def test_convert_file_applies_office_mode_like_hi_security(tmp_path: Path) -> None:
     """office modeで事業所WP向け安全化フィルターを通すテストです。"""
     load_file_path = tmp_path / "office.md"

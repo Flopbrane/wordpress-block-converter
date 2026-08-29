@@ -9,6 +9,7 @@ This tool is designed for users who prefer preparing stable WordPress block HTML
 ## Features
 
 - Convert plain text paragraphs into WordPress paragraph blocks
+- Convert WP-TXT `.wp_txt` files into headings, paragraphs, lists, quotes, code, tables, and images
 - Convert Markdown headings, paragraphs, lists, quotes, code blocks, tables, separators, images, and shortcodes
 - Convert simple HTML headings, paragraphs, lists, quotes, code blocks, tables, images, links, and shortcodes
 - Convert CSV/SSV/TSV/PSV separated-value files into table blocks
@@ -27,6 +28,7 @@ This tool is designed for users who prefer preparing stable WordPress block HTML
 | Format           | Extensions                                |
 | ---------------- | ----------------------------------------- |
 | Plain text       | `.txt`                                    |
+| WP-TXT           | `.wp_txt`, `.wptxt`                      |
 | Markdown         | `.md`, `.markdown`                        |
 | HTML             | `.html`, `.htm`                           |
 | Separated values | `.csv`, `.ssv`, `.tsv`, `.psv`, `.pipesv` |
@@ -42,6 +44,7 @@ This tool is designed for users who prefer preparing stable WordPress block HTML
 | Ver.1.3 | Generate headings, paragraphs, lists, tables, and FAQ sections from JSON | Supported |
 | Ver.1.4 | Markdown custom layout syntax for image rows, media-text sections, CTA, FAQ, and card layouts | In progress |
 | Ver.1.5 | wp_html_lint for block comments, heading levels, tables, links, and images | Supported |
+| Ver.1.6 | WP-TXT syntax for stable conversion from lightly marked plain text into headings, lists, quotes, code, tables, and images | Supported |
 
 ## Supported WordPress Blocks
 
@@ -70,6 +73,52 @@ This tool is designed for users who prefer preparing stable WordPress block HTML
 - Blank lines split paragraphs.
 - Line breaks inside a paragraph become `<br><br>`.
 - A 24px spacer block is inserted between paragraphs.
+
+### WP-TXT
+
+WP-TXT is a lightly marked text format for writing WordPress articles more predictably than plain `.txt`.
+
+| Syntax | Output |
+|---|---|
+| `【Heading】` | h2 heading |
+| `《Subheading》` | h3 heading |
+| Blank line | Paragraph break |
+| `・Item` | Unordered list |
+| `1. Item` | Ordered list |
+| `> Quote` | Quote |
+| `---` | Separator |
+| `[余白:50]` | 50px spacer |
+| `[リンク:Label|URL]` | Link |
+| `[画像:URL|Alt text]` | Image |
+| `[コード]` to `[/コード]` | Code block |
+| `[表]` to `[/表]` | Table |
+
+Example:
+
+```text
+【About WordPress】
+
+WordPress is a system for creating websites and blogs.
+
+《What it can do》
+
+・Write articles
+・Insert images
+・Create tables
+
+See [リンク:Official site|https://example.com/] for details.
+
+[画像:https://example.com/image.jpg|Example image]
+
+[コード]
+<p>This is a paragraph.</p>
+[/コード]
+
+[表]
+Item|Description
+h2|Large section
+[/表]
+```
 
 ### Markdown
 
@@ -221,9 +270,27 @@ In `hi-security` and `office` modes, `\\` with whitespace on both sides is treat
 
 You can check converted WordPress block HTML files.
 
+Recommended: move to the project folder in PowerShell before running the linter.
+
 ```powershell
-python -m wp_converter.lint path\to\file.wp_html
+cd D:\PC\Python\wp_converter
+python .\lint.py .\sample_wordpress.html
 ```
+
+To check a `.wp_html` file:
+
+```powershell
+python .\lint.py .\your_article.wp_html
+```
+
+If you prefer `python -m`, run it from the parent folder.
+
+```powershell
+cd D:\PC\Python
+python -m wp_converter.lint .\wp_converter\your_article.wp_html
+```
+
+If your current folder is `D:\PC\Python\wp_converter\dictionaries` or another subfolder, move back to `D:\PC\Python\wp_converter` first.
 
 It checks:
 
@@ -290,6 +357,7 @@ wp_converter/
 │  ├─ markdown_converter.py
 │  ├─ separated_values_converter.py
 │  ├─ text_converter.py
+│  ├─ wp_txt_converter.py
 ├─ blocks/
 │  ├─ code.py
 │  ├─ embed.py
@@ -312,7 +380,8 @@ wp_converter/
    ├─ json_dict.py
    ├─ markdown_dict.py
    ├─ separated_values_dict.py
-   └─ text_dict.py
+   ├─ text_dict.py
+   └─ wp_txt_dict.py
 ```
 
 ## Development Policy
