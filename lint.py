@@ -14,9 +14,17 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 try:
-    from .dictionaries.hi_security_dict import BLOCKED_TAGS
+    from .dictionaries.hi_security_dict import (
+        BLOCKED_ATTRIBUTES,
+        BLOCKED_TAGS,
+        BLOCKED_URL_PREFIXES,
+    )
 except ImportError:
-    from dictionaries.hi_security_dict import BLOCKED_TAGS
+    from dictionaries.hi_security_dict import (
+        BLOCKED_ATTRIBUTES,
+        BLOCKED_TAGS,
+        BLOCKED_URL_PREFIXES,
+    )
 
 
 @dataclass
@@ -48,15 +56,8 @@ TABLE_FIGURE_PATTERN: re.Pattern[str] = re.compile(
 )
 TABLE_TAG_PATTERN: re.Pattern[str] = re.compile(r"<table\b[^>]*>", re.IGNORECASE)
 
+RAW_HTML_BLOCK_NAMES: set[str] = {"html", "code"}
 VOID_TAGS: set[str] = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta"}
-BLOCKED_ATTRIBUTES: set[str] = {
-    "onclick",
-    "onload",
-    "onerror",
-    "onmouseover",
-    "style",
-}
-BLOCKED_URL_PREFIXES: tuple[str, ...] = ("javascript:", "data:", "vbscript:")
 
 
 def lint_wp_html(load_file: str) -> list[LintIssue]:
@@ -102,6 +103,20 @@ def _lint_block_comments(load_file: str) -> list[LintIssue]:
             is_end_comment = bool(block_match.group(1))
             block_name = block_match.group(2)
             block_attrs = block_match.group(3) or ""
+            _lint_raw_html_block_comment(
+                issues,
+                block_stack,
+                block_name,
+                is_end_comment,
+                line_number,
+            )
+            _lint_block_comment_inside_paragraph(
+                issues,
+                block_stack,
+                block_name,
+                is_end_comment,
+                line_number,
+            )
 
             if is_end_comment:
                 _close_block_comment(issues, block_stack, block_name, line_number)
@@ -126,6 +141,64 @@ def _lint_block_comments(load_file: str) -> list[LintIssue]:
         ))
 
     return issues
+
+
+def _lint_block_comment_inside_paragraph(
+    issues: list[LintIssue],
+    block_stack: list[dict[str, str | int]],
+    block_name: str,
+    is_end_comment: bool,
+    line_number: int,
+) -> None:
+    if is_end_comment and block_name == "paragraph":
+        return
+    if _find_open_block_name(block_stack, "paragraph") is None:
+        return
+
+    issues.append(LintIssue(
+        line_number,
+        f"paragraph ブロック内に wp:{block_name} ブロックコメントがあります。",
+        "独立ブロックは paragraph の外に出し、paragraph / code / paragraph のように兄弟ブロックとして並べてください。",
+    ))
+
+
+def _lint_raw_html_block_comment(
+    issues: list[LintIssue],
+    block_stack: list[dict[str, str | int]],
+    block_name: str,
+    is_end_comment: bool,
+    line_number: int,
+) -> None:
+    raw_block_name = _find_open_raw_html_block_name(block_stack)
+    if raw_block_name is None:
+        return
+
+    if is_end_comment and block_name == raw_block_name:
+        return
+
+    issues.append(LintIssue(
+        line_number,
+        f"wp:{raw_block_name} ブロック内に生の wp:{block_name} コメントがあります。",
+        f"wp:{raw_block_name} の中では、ブロックコメントを &lt;!-- wp:{block_name} --&gt; のように文字として書いてください。",
+    ))
+
+
+def _find_open_block_name(block_stack: list[dict[str, str | int]], target_block_name: str) -> str | None:
+    for block_info in reversed(block_stack):
+        block_name = str(block_info["name"])
+        if block_name == target_block_name:
+            return block_name
+
+    return None
+
+
+def _find_open_raw_html_block_name(block_stack: list[dict[str, str | int]]) -> str | None:
+    for block_info in reversed(block_stack):
+        block_name = str(block_info["name"])
+        if block_name in RAW_HTML_BLOCK_NAMES:
+            return block_name
+
+    return None
 
 
 def _close_block_comment(

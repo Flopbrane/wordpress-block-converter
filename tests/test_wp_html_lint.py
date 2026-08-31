@@ -66,6 +66,7 @@ def test_lint_reports_dangerous_tags_attributes_and_urls() -> None:
         "<style>p{color:red}</style>\n"
         '<p onclick="alert(1)" style="color:red">本文</p>\n'
         '<a href="javascript:alert(1)">危険リンク</a>\n'
+        '<a href="http://example.com">httpリンク</a>\n'
         '<img src="data:image/png;base64,abc" alt="危険画像">\n'
     )
 
@@ -134,6 +135,86 @@ def test_lint_reports_table_missing_figure_and_table() -> None:
 
     assert any('figure class="wp-block-table"' in issue.message for issue in issues)
     assert any("<table> がありません" in issue.message for issue in issues)
+
+
+def test_lint_reports_raw_block_comment_inside_html_block() -> None:
+    """htmlブロック内の生ブロックコメントを検出するテストです。"""
+    load_file = (
+        "<!-- wp:html -->\n"
+        "<div>説明</div>\n"
+        "<!-- wp:paragraph -->\n"
+        "<p>本文</p>\n"
+        "<!-- /wp:paragraph -->\n"
+        "<!-- /wp:html -->"
+    )
+
+    issues = lint_wp_html(load_file)
+
+    assert any("wp:html ブロック内に生の wp:paragraph コメント" in issue.message for issue in issues)
+
+
+def test_lint_reports_raw_block_comment_inside_code_block() -> None:
+    """codeブロック内の生ブロックコメントを検出するテストです。"""
+    load_file = (
+        "<!-- wp:code -->\n"
+        '<pre class="wp-block-code"><code>\n'
+        "<!-- wp:paragraph -->\n"
+        "<p>本文</p>\n"
+        "<!-- /wp:paragraph -->\n"
+        "</code></pre>\n"
+        "<!-- /wp:code -->"
+    )
+
+    issues = lint_wp_html(load_file)
+
+    assert any("wp:code ブロック内に生の wp:paragraph コメント" in issue.message for issue in issues)
+
+
+def test_lint_reports_block_comment_inside_paragraph_block() -> None:
+    """paragraphブロック内の独立ブロックコメントを検出するテストです。"""
+    load_file = (
+        "<!-- wp:paragraph -->\n"
+        "<p>文章です。\n"
+        "<!-- wp:code -->\n"
+        '<pre class="wp-block-code"><code>print("hello")</code></pre>\n'
+        "<!-- /wp:code -->\n"
+        "文章の続きです。</p>\n"
+        "<!-- /wp:paragraph -->"
+    )
+
+    issues = lint_wp_html(load_file)
+
+    assert any("paragraph ブロック内に wp:code ブロックコメント" in issue.message for issue in issues)
+
+
+def test_lint_passes_inline_code_inside_paragraph_block() -> None:
+    """paragraphブロック内のインラインcodeタグは通すテストです。"""
+    load_file = (
+        "<!-- wp:paragraph -->\n"
+        "<p>Pythonでは <code>print()</code> を使います。</p>\n"
+        "<!-- /wp:paragraph -->"
+    )
+
+    issues = lint_wp_html(load_file)
+
+    assert issues == []
+
+
+def test_lint_passes_escaped_block_comment_inside_code_block() -> None:
+    """codeブロック内のエスケープ済みブロックコメントは通すテストです。"""
+    load_file = (
+        "<!-- wp:code -->\n"
+        '<pre class="wp-block-code"><code>\n'
+        "&lt;!-- wp:paragraph --&gt;\n"
+        "&lt;p&gt;本文&lt;/p&gt;\n"
+        "&lt;!-- /wp:paragraph --&gt;\n"
+        "</code></pre>\n"
+        "<!-- /wp:code -->"
+    )
+
+    issues = lint_wp_html(load_file)
+
+    assert issues == []
 
 
 def test_lint_reports_anchor_and_image_attribute_issues() -> None:
