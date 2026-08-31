@@ -36,6 +36,10 @@ def test_convert_text_cleans_existing_wordpress_html() -> None:
         "<!-- wp:separator -->\n"
         '</p><hr class="wp-block-separator has-alpha-channel-opacity">\n'
         "<!-- /wp:separator -->\n"
+        "<!-- wp:paragraph -->\n"
+        "<p><code>&lt;!-- wp:paragraph --&gt; のような部分は、<br></code><br>\n"
+        "説明です。</p>\n"
+        "<!-- /wp:paragraph -->\n"
     )
 
     save_file = convert_text_to_gutenberg(load_file)
@@ -44,3 +48,4 @@ def test_convert_text_cleans_existing_wordpress_html() -> None:
     assert "<p></p>" not in save_file
     assert "<p>キャリカク岡山：F.K.</p>" in save_file
     assert "</p>\n<!-- /wp:paragraph -->\n<!-- wp:separator -->" in save_file
+    assert "<code>&lt;!-- wp:paragraph --&gt;</code> のような部分は、<br><br>" in save_file

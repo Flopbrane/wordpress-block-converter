@@ -25,7 +25,8 @@ EMPTY_PARAGRAPH_LINE_PATTERN: re.Pattern[str] = re.compile(
     re.IGNORECASE,
 )
 STANDALONE_BREAK_LINE_PATTERN: re.Pattern[str] = re.compile(r"^\s*<br\s*/?>\s*$", re.IGNORECASE)
-TRAILING_BREAK_PATTERN: re.Pattern[str] = re.compile(r"(\s*<br\s*/?>\s*)$", re.IGNORECASE)
+TRAILING_BREAKS_PATTERN: re.Pattern[str] = re.compile(r"((?:\s*<br\s*/?>\s*)+)$", re.IGNORECASE)
+CODE_LINE_PATTERN: re.Pattern[str] = re.compile(r"^(\s*(?:<p\b[^>]*>)?)<code>(.*)$", re.IGNORECASE)
 MISORDERED_CODE_PARAGRAPH_END_PATTERN: re.Pattern[str] = re.compile(
     r"(<code\b[^>]*>.*?)(</p>)(</code>)",
     re.IGNORECASE,
@@ -111,22 +112,55 @@ def _fix_code_line(line: str) -> str:
     if "wp-block-separator" in line:
         return line.replace("<code>", "").replace("</code>", "")
 
-    if not stripped_line.startswith("<code>"):
+    code_line_match = CODE_LINE_PATTERN.match(line)
+    if code_line_match is None:
         return line
 
-    indent = line[:len(line) - len(stripped_line)]
-    body = stripped_line.removeprefix("<code>")
+    prefix = code_line_match.group(1)
+    body = code_line_match.group(2)
     break_html = ""
-    break_match = TRAILING_BREAK_PATTERN.search(body)
-    if break_match:
-        break_html = break_match.group(1).strip()
-        body = body[:break_match.start()]
 
     body = body.replace("<code>", "").replace("</code>", "").replace("&gt;/code&gt;", "&gt;").strip()
-    if break_html:
-        return f"{indent}<code>{body}</code>{break_html}"
+    break_match = TRAILING_BREAKS_PATTERN.search(body)
+    if break_match:
+        break_html = _normalize_break_html(break_match.group(1))
+        body = body[:break_match.start()].strip()
 
-    return f"{indent}<code>{body}</code>"
+    split_body = _split_inline_code_and_description(body)
+    if split_body is not None:
+        code_text, description_text = split_body
+        if break_html:
+            return f"{prefix}<code>{code_text}</code>{description_text}{break_html}"
+        return f"{prefix}<code>{code_text}</code>{description_text}"
+
+    if break_html:
+        return f"{prefix}<code>{body}</code>{break_html}"
+
+    return f"{prefix}<code>{body}</code>"
+
+
+def _normalize_break_html(break_html: str) -> str:
+    break_count = len(re.findall(r"<br\s*/?>", break_html, flags=re.IGNORECASE))
+    if break_count >= 2:
+        return "<br><br>"
+
+    return "<br>"
+
+
+def _split_inline_code_and_description(body: str) -> tuple[str, str] | None:
+    if not body.startswith("&lt;"):
+        return None
+
+    escaped_end_index = body.find("&gt;")
+    if escaped_end_index == -1:
+        return None
+
+    code_text = body[:escaped_end_index + len("&gt;")]
+    description_text = body[escaped_end_index + len("&gt;"):]
+    if not description_text.strip() or "&lt;" in description_text:
+        return None
+
+    return code_text, description_text
 
 
 def _fix_common_inline_tag_mistakes(line: str) -> str:
