@@ -21,7 +21,7 @@ from blocks.separator import create_separator_block
 from blocks.shortcode import create_shortcode_block
 from blocks.table import create_table_block
 
-HTML_EXTENSIONS: set[str] = {".html", ".htm"}
+HTML_EXTENSIONS: set[str] = {".html", ".htm", ".wp_html"}
 
 HTML_FORMAT_NAME = "html"
 

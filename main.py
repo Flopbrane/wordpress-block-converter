@@ -17,6 +17,7 @@ from dictionaries.hi_security_dict import (
 )
 from file_checker import select_converter
 from gui_maker import run_gui
+from repair_mode import repair_wordpress_html
 from rewrite_style import apply_rewrite_style
 from storage import read_load_file, write_save_file
 
@@ -25,6 +26,7 @@ def convert_file(
     load_file_path: str | Path,
     save_file_path: str | Path,
     mode: str = NORMAL_MODE,
+    repair_mode: bool = False,
 ) -> None:
     """ファイルの拡張子に応じて、WordPress Gutenberg向けHTMLへ変換します。"""
     load_file_path = Path(load_file_path)
@@ -35,6 +37,11 @@ def convert_file(
     normalized_mode = normalize_conversion_mode(mode)
 
     load_file: str = read_load_file(load_file_path)
+    if repair_mode:
+        save_file = repair_wordpress_html(load_file, normalized_mode)
+        write_save_file(save_file_path, save_file)
+        return
+
     converter = select_converter(load_file_path)
     save_file: str = converter(load_file)
     if normalized_mode in SAFE_CONVERSION_MODES:
@@ -58,13 +65,19 @@ def main() -> None:
         help="変換モードを選びます",
     )
     parser.add_argument("--gui", action="store_true", help="ファイル選択画面で変換します")
+    parser.add_argument("--repair", action="store_true", help="既存のWordPressコードを修復します")
     args: argparse.Namespace = parser.parse_args()
 
     if args.gui or not args.load_file_path or not args.save_file_path:
         run_gui(convert_file)
         return
 
-    convert_file(args.load_file_path, args.save_file_path, mode=args.mode)
+    convert_file(
+        args.load_file_path,
+        args.save_file_path,
+        mode=args.mode,
+        repair_mode=args.repair,
+    )
     print(f"変換が完了しました: {args.save_file_path}")
 
 

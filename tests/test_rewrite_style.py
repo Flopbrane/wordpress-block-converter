@@ -64,6 +64,42 @@ def test_apply_rewrite_style_uses_correct_data_ignore_words() -> None:
     assert "<code>paragraph</code>" in rewritten_file
 
 
+def test_apply_rewrite_style_removes_leading_spaces_after_first_paragraph_line() -> None:
+    """段落2行目以降の行頭スペースだけを削除するテストです。"""
+    save_file = (
+        "<!-- wp:paragraph -->\n"
+        "<p>　最初の行は字下げを残します。<br>\n"
+        "  2行目の半角スペースは削除します。<br>\n"
+        "　3行目の全角スペースも削除します。<br></p>\n"
+        "<!-- /wp:paragraph -->"
+    )
+
+    rewritten_file = apply_rewrite_style(save_file, mode="middle")
+
+    assert "<p>　最初の行は字下げを残します。<br><br>" in rewritten_file
+    assert "\n2行目の半角スペースは削除します。<br><br>" in rewritten_file
+    assert "\n3行目の全角スペースも削除します。<br><br>" in rewritten_file
+    assert "\n  2行目" not in rewritten_file
+    assert "\n　3行目" not in rewritten_file
+
+
+def test_apply_rewrite_style_keeps_first_non_empty_paragraph_line_indent() -> None:
+    """p直後が改行でも最初の本文行の字下げは残すテストです。"""
+    save_file = (
+        "<!-- wp:paragraph -->\n"
+        "<p>\n"
+        "　これは1行目です。<br>\n"
+        "　二行目です。<br></p>\n"
+        "<!-- /wp:paragraph -->"
+    )
+
+    rewritten_file = apply_rewrite_style(save_file, mode="middle")
+
+    assert "\n　これは1行目です。<br><br>" in rewritten_file
+    assert "\n二行目です。<br><br>" in rewritten_file
+    assert "\n　二行目です。" not in rewritten_file
+
+
 def test_apply_rewrite_style_can_change_ignore_words_with_json(tmp_path: Path) -> None:
     """外部JSONを変更するとcode囲み除外基準が変わるテストです。"""
     correct_data_path = tmp_path / "correct_data.json"

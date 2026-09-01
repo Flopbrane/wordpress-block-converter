@@ -16,12 +16,12 @@ from dictionaries.hi_security_dict import HIGH_SECURITY_MODE, MIDDLE_MODE, NORMA
 from file_checker import SUPPORTED_FILE_TYPES
 
 
-def run_gui(convert_file: Callable[[str | Path, str | Path, str], None]) -> None:
+def run_gui(convert_file: Callable[[str | Path, str | Path, str, bool], None]) -> None:
     """ファイル選択画面からWordPress Gutenberg向けHTMLへ変換します。"""
     root = tk.Tk()
     root.withdraw()
 
-    mode: str = _select_mode_with_gui(root)
+    mode, repair_mode = _select_mode_with_gui(root)
     if not mode:
         messagebox.showinfo("キャンセル", "変換をキャンセルしました。")
         return
@@ -34,7 +34,10 @@ def run_gui(convert_file: Callable[[str | Path, str | Path, str], None]) -> None
         messagebox.showinfo("キャンセル", "変換をキャンセルしました。")
         return
 
-    default_save_file_path: Path = create_default_save_file_path(load_file_path)
+    default_save_file_path: Path = create_default_save_file_path(
+        load_file_path,
+        repair_mode=repair_mode,
+    )
     save_file_path: str = filedialog.asksaveasfilename(
         title="変換後HTMLの保存先を選んでください",
         defaultextension=".wp_html",
@@ -47,7 +50,7 @@ def run_gui(convert_file: Callable[[str | Path, str | Path, str], None]) -> None
         return
 
     try:
-        convert_file(load_file_path, save_file_path, mode)
+        convert_file(load_file_path, save_file_path, mode, repair_mode)
     except (ValueError, TypeError, PermissionError) as error:
         messagebox.showerror("変換エラー", str(error))
         return
@@ -55,10 +58,11 @@ def run_gui(convert_file: Callable[[str | Path, str | Path, str], None]) -> None
     show_conversion_complete_dialog(root, Path(save_file_path))
 
 
-def create_default_save_file_path(load_file_path: str | Path) -> Path:
+def create_default_save_file_path(load_file_path: str | Path, repair_mode: bool = False) -> Path:
     """変換後HTMLの標準保存先を作ります。"""
     load_file_path = Path(load_file_path)
-    return load_file_path.with_name(f"{load_file_path.stem}_wordpress.wp_html")
+    suffix = "repair" if repair_mode else "wordpress"
+    return load_file_path.with_name(f"{load_file_path.stem}_{suffix}.wp_html")
 
 
 def show_conversion_complete_dialog(root: tk.Tk, save_file_path: str | Path) -> None:
@@ -96,19 +100,26 @@ def show_conversion_complete_dialog(root: tk.Tk, save_file_path: str | Path) -> 
     root.wait_window(dialog)
 
 
-def _select_mode_with_gui(root: tk.Tk) -> str:
+def _select_mode_with_gui(root: tk.Tk) -> tuple[str, bool]:
     """GUIで変換モードを選びます。"""
     selected_mode = tk.StringVar(value=NORMAL_MODE)
-    result: dict[str, str] = {"mode": ""}
+    selected_repair_mode = tk.BooleanVar(value=False)
+    result: dict[str, str | bool] = {"mode": "", "repair_mode": False}
 
     mode_window = tk.Toplevel(root)
     mode_window.title("変換モード")
     mode_window.resizable(False, False)
     mode_window.grab_set()
 
-    tk.Label(mode_window, text="変換モードを選んでください").pack(
+    tk.Checkbutton(
+        mode_window,
+        text="修復モード（既存のWordPressコードを直す）",
+        variable=selected_repair_mode,
+    ).pack(padx=20, pady=(16, 8), anchor="w")
+
+    tk.Label(mode_window, text="適用するモードを選んでください").pack(
         padx=20,
-        pady=(16, 8),
+        pady=(0, 8),
         anchor="w",
     )
     tk.Radiobutton(
@@ -132,9 +143,10 @@ def _select_mode_with_gui(root: tk.Tk) -> str:
 
     def decide_mode() -> None:
         result["mode"] = selected_mode.get()
+        result["repair_mode"] = selected_repair_mode.get()
         mode_window.destroy()
 
     tk.Button(mode_window, text="OK", command=decide_mode).pack(pady=(8, 16))
     mode_window.protocol("WM_DELETE_WINDOW", mode_window.destroy)
     root.wait_window(mode_window)
-    return result["mode"]
+    return str(result["mode"]), bool(result["repair_mode"])

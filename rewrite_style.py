@@ -56,6 +56,7 @@ TRAILING_BREAKS_PATTERN: re.Pattern[str] = re.compile(
     re.IGNORECASE,
 )
 JAPANESE_TEXT_PATTERN: re.Pattern[str] = re.compile(r"[ぁ-んァ-ヶ一-龠々ー]")
+LEADING_SPACE_PATTERN: re.Pattern[str] = re.compile(r"^[ \t　]+")
 
 
 def apply_rewrite_style(
@@ -176,11 +177,20 @@ def _rewrite_paragraph_block(
 
 def _rewrite_paragraph_body(body: str, code_wrap_ignore_words: set[str]) -> str:
     rewritten_lines: list[str] = []
+    found_first_text_line = False
 
     for line in body.splitlines():
+        if line.strip() and found_first_text_line:
+            line = _remove_leading_spaces(line)
+        elif line.strip():
+            found_first_text_line = True
         rewritten_lines.append(_rewrite_paragraph_line(line, code_wrap_ignore_words))
 
     return "\n".join(rewritten_lines)
+
+
+def _remove_leading_spaces(line: str) -> str:
+    return LEADING_SPACE_PATTERN.sub("", line)
 
 
 def _rewrite_paragraph_line(line: str, code_wrap_ignore_words: set[str]) -> str:

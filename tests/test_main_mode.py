@@ -94,6 +94,24 @@ def test_convert_file_applies_rewrite_style_to_middle_mode(tmp_path: Path) -> No
     assert "<code>paragraph</code> の説明です。" in save_file
 
 
+def test_convert_file_repair_mode_keeps_existing_wp_blocks(tmp_path: Path) -> None:
+    """修復モードでは既存WPブロックを通常HTML変換しないテストです。"""
+    load_file_path = tmp_path / "broken.wp_html"
+    save_file_path = tmp_path / "broken_repair.wp_html"
+    load_file_path.write_text(
+        "<!-- wp:paragraph -->\n"
+        "キャリカク岡山：F.K.\n"
+        "<!-- /wp:paragraph -->\n",
+        encoding="utf-8",
+    )
+
+    convert_file(load_file_path, save_file_path, mode="normal", repair_mode=True)
+
+    save_file = save_file_path.read_text(encoding="utf-8")
+    assert "<p>キャリカク岡山：F.K.</p>" in save_file
+    assert "&lt;!-- wp:paragraph --&gt;" not in save_file
+
+
 def test_future_document_converters_are_prepared() -> None:
     """将来の文書変換メソッドが用意されていることを確認するテストです。"""
     test_case = TestCase()

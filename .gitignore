@@ -33,6 +33,8 @@ sample.txt
 *output.md
 *output.html
 *.html
+*.wp_html
+
 # Logs
 *.log
 

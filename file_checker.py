@@ -23,11 +23,11 @@ from dictionaries.text_dict import TEXT_EXTENSIONS
 from dictionaries.wp_txt_dict import WP_TXT_EXTENSIONS
 
 SUPPORTED_FILE_TYPES: list[tuple[str, str]] = [
-    ("対応ファイル", "*.txt *.wp_txt *.wptxt *.md *.markdown *.html *.htm *.csv *.ssv *.tsv *.psv *.pipesv *.json"),
+    ("対応ファイル", "*.txt *.wp_txt *.wptxt *.md *.markdown *.html *.htm *.wp_html *.csv *.ssv *.tsv *.psv *.pipesv *.json"),
     ("テキスト", "*.txt"),
     ("WP-TXT", "*.wp_txt *.wptxt"),
     ("Markdown", "*.md *.markdown"),
-    ("HTML", "*.html *.htm"),
+    ("HTML", "*.html *.htm *.wp_html"),
     ("区切り値ファイル", "*.csv *.ssv *.tsv *.psv *.pipesv"),
     ("JSON", "*.json"),
     ("すべてのファイル", "*.*"),
