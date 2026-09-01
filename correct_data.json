@@ -1,0 +1,10 @@
+{
+  "code_wrap_ignore_words": [
+    "CSS",
+    "HTML",
+    "URL",
+    "WordPress",
+    "Python",
+    "px"
+  ]
+}

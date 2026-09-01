@@ -17,6 +17,7 @@ from dictionaries.hi_security_dict import (
 )
 from file_checker import select_converter
 from gui_maker import run_gui
+from rewrite_style import apply_rewrite_style
 from storage import read_load_file, write_save_file
 
 
@@ -38,6 +39,7 @@ def convert_file(
     save_file: str = converter(load_file)
     if normalized_mode in SAFE_CONVERSION_MODES:
         save_file = apply_hi_security_filter(save_file)
+    save_file = apply_rewrite_style(save_file, normalized_mode)
 
     write_save_file(save_file_path, save_file)
 

@@ -69,6 +69,31 @@ def test_convert_file_keeps_normal_mode_output(tmp_path: Path) -> None:
     assert "<!-- wp:embed" in save_file
 
 
+def test_convert_file_keeps_normal_mode_without_rewrite_style(tmp_path: Path) -> None:
+    """normalではrewrite_styleを通さないテストです。"""
+    load_file_path = tmp_path / "sample.md"
+    save_file_path = tmp_path / "sample_wordpress.html"
+    load_file_path.write_text("paragraph の説明です。", encoding="utf-8")
+
+    convert_file(load_file_path, save_file_path, mode="normal")
+
+    save_file = save_file_path.read_text(encoding="utf-8")
+    assert "<p>paragraph の説明です。</p>" in save_file
+    assert "<code>paragraph</code>" not in save_file
+
+
+def test_convert_file_applies_rewrite_style_to_middle_mode(tmp_path: Path) -> None:
+    """middleではrewrite_styleを通すテストです。"""
+    load_file_path = tmp_path / "sample.md"
+    save_file_path = tmp_path / "sample_wordpress.html"
+    load_file_path.write_text("paragraph の説明です。", encoding="utf-8")
+
+    convert_file(load_file_path, save_file_path, mode="middle")
+
+    save_file = save_file_path.read_text(encoding="utf-8")
+    assert "<code>paragraph</code> の説明です。" in save_file
+
+
 def test_future_document_converters_are_prepared() -> None:
     """将来の文書変換メソッドが用意されていることを確認するテストです。"""
     test_case = TestCase()
