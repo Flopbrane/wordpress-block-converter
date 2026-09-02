@@ -72,7 +72,8 @@ def test_convert_wp_txt_ordered_list_and_quote() -> None:
 
     save_file = convert_wp_txt_to_gutenberg(load_file)
 
-    assert "<ol>" in save_file
+    assert '<!-- wp:list {"ordered":true} -->' in save_file
+    assert '<ol class="wp-block-list">' in save_file
     assert "<li>最初</li>" in save_file
     assert "<!-- wp:quote -->" in save_file
     assert "引用文です。<br>2行目です。" in save_file

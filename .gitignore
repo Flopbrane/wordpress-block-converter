@@ -34,7 +34,7 @@ sample.txt
 *output.html
 *.html
 *.wp_html
-
+回帰テスト用サンプル.md
 # Logs
 *.log
 

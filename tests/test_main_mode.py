@@ -82,6 +82,19 @@ def test_convert_file_keeps_normal_mode_without_rewrite_style(tmp_path: Path) ->
     assert "<code>paragraph</code>" not in save_file
 
 
+def test_convert_file_keeps_existing_wp_html_from_md_file(tmp_path: Path) -> None:
+    """md拡張子でも既存WP HTMLなら二重変換しないテストです。"""
+    load_file_path = tmp_path / "already_converted.md"
+    save_file_path = tmp_path / "already_converted.wp_html"
+    load_file = "<!-- wp:paragraph -->\n<p>本文です。</p>\n<!-- /wp:paragraph -->"
+    load_file_path.write_text(load_file, encoding="utf-8")
+
+    convert_file(load_file_path, save_file_path, mode="normal")
+
+    save_file = save_file_path.read_text(encoding="utf-8")
+    assert save_file == load_file
+
+
 def test_convert_file_applies_rewrite_style_to_middle_mode(tmp_path: Path) -> None:
     """middleではrewrite_styleを通すテストです。"""
     load_file_path = tmp_path / "sample.md"

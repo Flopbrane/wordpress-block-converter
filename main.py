@@ -42,7 +42,7 @@ def convert_file(
         write_save_file(save_file_path, save_file)
         return
 
-    converter = select_converter(load_file_path)
+    converter = select_converter(load_file_path, load_file)
     save_file: str = converter(load_file)
     if normalized_mode in SAFE_CONVERSION_MODES:
         save_file = apply_hi_security_filter(save_file)

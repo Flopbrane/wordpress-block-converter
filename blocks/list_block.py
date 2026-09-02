@@ -15,14 +15,23 @@ def create_list_block(items: list[str], ordered: bool = False, use_html_block: b
     """箇条書きをWordPress Gutenbergのlistブロックに変換します。"""
     tag_name: Literal['ol', 'ul'] = "ol" if ordered else "ul"
     safe_items: list[str] = [format_inline_text(item.strip()) for item in items if item.strip()]
-    list_items: str = "\n".join(f"<li>{item}</li>" for item in safe_items)
-    list_html: str = f"<{tag_name}>\n{list_items}\n</{tag_name}>"
 
     if use_html_block:
+        list_items: str = "\n".join(f"<li>{item}</li>" for item in safe_items)
+        list_html: str = f"<{tag_name}>\n{list_items}\n</{tag_name}>"
         return f"<!-- wp:html -->\n{list_html}\n<!-- /wp:html -->"
 
+    list_items = "\n".join(
+        "<!-- wp:list-item -->\n"
+        f"<li>{item}</li>\n"
+        "<!-- /wp:list-item -->"
+        for item in safe_items
+    )
+    list_html = f'<{tag_name} class="wp-block-list">\n{list_items}\n</{tag_name}>'
+    start_comment = '<!-- wp:list {"ordered":true} -->' if ordered else "<!-- wp:list -->"
+
     return (
-        f"<!-- wp:list -->\n"
+        f"{start_comment}\n"
         f"{list_html}\n"
         "<!-- /wp:list -->"
     )

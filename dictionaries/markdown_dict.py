@@ -26,12 +26,13 @@ MARKDOWN_FORMAT_NAME = "markdown"
 
 MARKDOWN_HEADING_MARK = "#"
 
-MARKDOWN_UNORDERED_LIST_MARKS: set[str] = {"-", "*", "+"}
+MARKDOWN_UNORDERED_LIST_MARKS: set[str] = {"-", "*"}
 
 MARKDOWN_CODE_FENCE = "```"
 
+MARKDOWN_SINGLE_CODE_PATTERN: re.Pattern[str] = re.compile(r"^`([^`\n]+)`$")
 MARKDOWN_HEADING_PATTERN: re.Pattern[str] = re.compile(r"^(#{1,6})\s+(.+)$")
-MARKDOWN_UNORDERED_LIST_PATTERN: re.Pattern[str] = re.compile(r"^\s*[-*+]\s+(.+)$")
+MARKDOWN_UNORDERED_LIST_PATTERN: re.Pattern[str] = re.compile(r"^\s*[-*]\s+(.+)$")
 MARKDOWN_ORDERED_LIST_PATTERN: re.Pattern[str] = re.compile(r"^\s*\d+[.)]\s+(.+)$")
 MARKDOWN_QUOTE_PATTERN: re.Pattern[str] = re.compile(r"^\s*>\s?(.+)$")
 MARKDOWN_SPACER_PATTERN: re.Pattern[str] = re.compile(
@@ -59,20 +60,21 @@ MARKDOWN_LIST_RULES: dict[str, dict[str, str | re.Pattern[str] | Callable[..., o
         "pattern": MARKDOWN_UNORDERED_LIST_PATTERN,
         "converter": create_list_block,
         "ordered": False,
-        "use_html_block": True,
+        "use_html_block": False,
     },
     "ordered": {
         "name": "ordered_list",
         "pattern": MARKDOWN_ORDERED_LIST_PATTERN,
         "converter": create_list_block,
         "ordered": True,
-        "use_html_block": True,
+        "use_html_block": False,
     },
 }
 
 MARKDOWN_CODE_RULE: dict[str, str | Callable[..., object]] = {
     "name": "code",
     "fence": MARKDOWN_CODE_FENCE,
+    "single_line_pattern": MARKDOWN_SINGLE_CODE_PATTERN,
     "converter": create_code_block,
 }
 
