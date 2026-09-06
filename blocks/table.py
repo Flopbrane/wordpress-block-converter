@@ -26,7 +26,11 @@ def create_table_block(table_html: str) -> str:
     return _create_table_block_from_row_data(rows)
 
 
-def create_table_block_from_rows(headers: list[str], rows: list[list[str]]) -> str:
+def create_table_block_from_rows(
+    headers: list[str],
+    rows: list[list[str]],
+    convert_inline_code: bool = False,
+) -> str:
     """Markdown表の行データをWordPress Gutenbergのtableブロックに変換します。"""
     table_rows: list[list[dict[str, str]]] = []
 
@@ -39,10 +43,16 @@ def create_table_block_from_rows(headers: list[str], rows: list[list[str]]) -> s
     if not table_rows:
         return ""
 
-    return _create_table_block_from_row_data(table_rows)
+    return _create_table_block_from_row_data(
+        table_rows,
+        convert_inline_code=convert_inline_code,
+    )
 
 
-def _create_table_block_from_row_data(rows: list[list[dict[str, str]]]) -> str:
+def _create_table_block_from_row_data(
+    rows: list[list[dict[str, str]]],
+    convert_inline_code: bool = False,
+) -> str:
     header_rows: list[list[dict[str, str]]] = []
     body_rows: list[list[dict[str, str]]] = rows
 
@@ -54,11 +64,17 @@ def _create_table_block_from_row_data(rows: list[list[dict[str, str]]]) -> str:
     if header_rows:
         header_html = (
             "<thead>\n" 
-            + "\n".join(_create_row_html(row) for row in header_rows)
+            + "\n".join(
+                _create_row_html(row, convert_inline_code=convert_inline_code)
+                for row in header_rows
+            )
             + "\n</thead>\n"
         )
 
-    body_html: str = "\n".join(_create_row_html(row) for row in body_rows)
+    body_html: str = "\n".join(
+        _create_row_html(row, convert_inline_code=convert_inline_code)
+        for row in body_rows
+    )
     return (
         "<!-- wp:table -->\n"
         "<figure class=\"wp-block-table\"><table>\n"
@@ -87,9 +103,11 @@ def _extract_rows(table_html: str) -> list[list[dict[str, str]]]:
     return rows
 
 
-def _create_row_html(row: list[dict[str, str]]) -> str:
+def _create_row_html(row: list[dict[str, str]], convert_inline_code: bool = False) -> str:
     cells = "".join(
-        f"<{cell['tag']}>{format_inline_text(cell['text'])}</{cell['tag']}>"
+        f"<{cell['tag']}>"
+        f"{format_inline_text(cell['text'], convert_inline_code=convert_inline_code)}"
+        f"</{cell['tag']}>"
         for cell in row
     )
     return f"<tr>{cells}</tr>"

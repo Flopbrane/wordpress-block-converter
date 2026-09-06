@@ -37,12 +37,13 @@ sample.txt
 回帰テスト用サンプル.md
 # Logs
 *.log
-
+*.ps1
 # OS / editor
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
+CODEX_RULES.md
 
 # Temporary files
 *.tmp

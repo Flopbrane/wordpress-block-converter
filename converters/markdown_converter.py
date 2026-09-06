@@ -148,8 +148,14 @@ def convert_markdown_to_gutenberg(load_file: str) -> str:
             _flush_paragraph(blocks, paragraph_lines)
             paragraph_lines = []
             level = len(heading_match.group(1))
-            heading_converter = cast(Callable[[str, int], str], MARKDOWN_HEADING_RULE["converter"])
-            blocks.append(heading_converter(heading_match.group(2), level))
+            heading_converter = cast(Callable[..., str], MARKDOWN_HEADING_RULE["converter"])
+            blocks.append(
+                heading_converter(
+                    heading_match.group(2),
+                    level,
+                    convert_inline_code=True,
+                )
+            )
             continue
 
         spacer_pattern: re.Pattern[str] = cast(re.Pattern[str], MARKDOWN_SPACER_RULE["pattern"])
@@ -332,6 +338,7 @@ def _flush_paragraph(blocks: list[str], paragraph_lines: list[str]) -> None:
             create_paragraph_block(
                 _build_paragraph_text(paragraph_lines),
                 line_break_html="<br><br>",
+                convert_inline_code=True,
             )
         )
 
@@ -367,14 +374,15 @@ def _flush_list(blocks: list[str], list_items: list[str], ordered: bool) -> None
                 list_items,
                 ordered=list_ordered,
                 use_html_block=use_html_block,
+                convert_inline_code=True,
             )
         )
 
 
 def _flush_quote(blocks: list[str], quote_lines: list[str]) -> None:
     if quote_lines:
-        quote_converter = cast(Callable[[str], str], MARKDOWN_QUOTE_RULE["converter"])
-        blocks.append(quote_converter(" ".join(quote_lines)))
+        quote_converter = cast(Callable[..., str], MARKDOWN_QUOTE_RULE["converter"])
+        blocks.append(quote_converter(" ".join(quote_lines), convert_inline_code=True))
 
 
 def _flush_table(blocks: list[str], table_lines: list[str], paragraph_lines: list[str]) -> None:
@@ -390,10 +398,10 @@ def _flush_table(blocks: list[str], table_lines: list[str], paragraph_lines: lis
     headers = _split_table_row(table_lines[0])
     rows = [_split_table_row(row) for row in table_lines[2:]]
     table_converter = cast(
-        Callable[[list[str], list[list[str]]], str],
+        Callable[..., str],
         MARKDOWN_TABLE_RULE["converter"]
         )
-    blocks.append(table_converter(headers, rows))
+    blocks.append(table_converter(headers, rows, convert_inline_code=True))
     table_lines.clear()
 
 

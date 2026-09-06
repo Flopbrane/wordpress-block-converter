@@ -9,10 +9,10 @@ from __future__ import annotations
 from blocks.inline import format_inline_text
 
 
-def create_heading_block(text: str, level: int = 2) -> str:
+def create_heading_block(text: str, level: int = 2, convert_inline_code: bool = False) -> str:
     """見出しをWordPress Gutenbergのheadingブロックに変換します。"""
     safe_level = min(max(level, 1), 6)
-    safe_text = format_inline_text(text.strip())
+    safe_text = format_inline_text(text.strip(), convert_inline_code=convert_inline_code)
 
     return (
         f'<!-- wp:heading {{"level":{safe_level}}} -->\n'

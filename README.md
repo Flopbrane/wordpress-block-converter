@@ -34,6 +34,12 @@ This tool is designed for users who prefer preparing stable WordPress block HTML
 | Separated values | `.csv`, `.ssv`, `.tsv`, `.psv`, `.pipesv` |
 | JSON             | `.json`                                   |
 
+## Rules for Plain Text
+
+For ordinary `.txt` files, the converter keeps the rules simple: blank lines become paragraph breaks. If you want to add headings, lists, quotes, code blocks, tables, links, or images before conversion, use the marked plain-text format described in [HOW_TO_USE_FOR_PLAIN_TEXT.md](HOW_TO_USE_FOR_PLAIN_TEXT.md).
+
+Save marked plain text as `.wp_txt` or `.wptxt`. A plain `.txt` file is intentionally treated as paragraph-only text.
+
 ## Version Support
 
 | Version | Support | Status |
@@ -129,6 +135,7 @@ Supported Markdown-style input includes:
 - Unordered lists: `-`, `*`, `+`
 - Ordered lists: `1.` or `1)`
 - Code fences: triple backticks
+- Inline code: single backticks, such as `` `text` ``, become `<code>text</code>`
 - Quotes: `> quote`
 - Tables: `| column | column |`
 - Images: `![alt](https://example.com/image.jpg)`
@@ -138,6 +145,8 @@ Supported Markdown-style input includes:
 - Spacer marker: `[spacer]` or `[spacer:60]`
 - WordPress shortcodes: `[shortcode ...]`
 - Standalone URLs for embeds, media, and files
+
+Backtick syntax is treated as Markdown only. It is converted only for `.md` and `.markdown` files: single-backtick text becomes inline `<code>`, and triple-backtick fences become WordPress `wp:code` blocks. In `.txt`, `.html`, `.htm`, and other formats, backticks are preserved as ordinary text.
 
 #### Markdown Custom Layout Syntax
 
@@ -179,6 +188,8 @@ Supported simple HTML input includes:
 - `<hr>`
 
 `<b>` is converted to `<strong>`, and `<i>` is converted to `<em>` in the output.
+
+Backticks in `.html` and `.htm` files are preserved as ordinary text. The converter must not rewrite backticks inside HTML content, especially inside `script`, `style`, `pre`, or `code` elements.
 
 ### Separated Values
 

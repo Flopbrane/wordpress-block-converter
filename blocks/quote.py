@@ -9,9 +9,9 @@ from __future__ import annotations
 from blocks.inline import format_inline_text
 
 
-def create_quote_block(text: str) -> str:
+def create_quote_block(text: str, convert_inline_code: bool = False) -> str:
     """引用文をWordPress Gutenbergのquoteブロックに変換します。"""
-    safe_text: str = format_inline_text(text.strip())
+    safe_text: str = format_inline_text(text.strip(), convert_inline_code=convert_inline_code)
     return (
         "<!-- wp:quote -->\n"
         '<blockquote class="wp-block-quote">\n'

@@ -30,6 +30,7 @@ def convert_markdown_layout_to_gutenberg(layout_name: str, layout_lines: list[st
             text=layout_data.get("text", ""),
             media_position=media_position,
             media_width=_to_int(layout_data.get("width", "40"), 40),
+            convert_inline_code=True,
         )
 
     if clean_layout_name in {"image_row", "image_row_2", "image_row_3"}:
@@ -44,6 +45,7 @@ def convert_markdown_layout_to_gutenberg(layout_name: str, layout_lines: list[st
             text=layout_data.get("text", ""),
             button=layout_data.get("button", ""),
             url=layout_data.get("url", ""),
+            convert_inline_code=True,
         )
 
     if clean_layout_name == "faq":
@@ -53,6 +55,7 @@ def convert_markdown_layout_to_gutenberg(layout_name: str, layout_lines: list[st
         return create_card_columns_block(
             _collect_numbered_items(layout_data, "title", "text"),
             gap=layout_data.get("gap", "24px"),
+            convert_inline_code=True,
         )
 
     return ""
@@ -102,7 +105,7 @@ def _collect_numbered_items(
 def _create_faq_blocks(layout_data: dict[str, str]) -> str:
     blocks = []
     if layout_data.get("title", "").strip():
-        blocks.append(create_heading_block(layout_data["title"], 2))
+        blocks.append(create_heading_block(layout_data["title"], 2, convert_inline_code=True))
 
     indexes = sorted(
         {
@@ -117,9 +120,9 @@ def _create_faq_blocks(layout_data: dict[str, str]) -> str:
         question = layout_data.get(f"q{index}", "")
         answer = layout_data.get(f"a{index}", "")
         if question.strip():
-            blocks.append(create_heading_block(question, 3))
+            blocks.append(create_heading_block(question, 3, convert_inline_code=True))
         if answer.strip():
-            blocks.append(create_paragraph_block(answer))
+            blocks.append(create_paragraph_block(answer, convert_inline_code=True))
 
     return "\n\n".join(blocks)
 

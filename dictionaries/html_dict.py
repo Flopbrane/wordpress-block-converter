@@ -304,14 +304,14 @@ HTML_BLOCK_RULES: dict[str, dict[str, object]] = {
         "pattern": HTML_UNORDERED_LIST_PATTERN,
         "converter": create_list_block,
         "ordered": False,
-        "use_html_block": True,
+        "use_html_block": False,
     },
     "ordered_list": {
         "name": "ordered_list",
         "pattern": HTML_ORDERED_LIST_PATTERN,
         "converter": create_list_block,
         "ordered": True,
-        "use_html_block": True,
+        "use_html_block": False,
     },
     "quote": {
         "name": "quote",

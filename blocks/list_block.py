@@ -11,10 +11,19 @@ from typing import Literal
 from blocks.inline import format_inline_text
 
 
-def create_list_block(items: list[str], ordered: bool = False, use_html_block: bool = False) -> str:
+def create_list_block(
+    items: list[str],
+    ordered: bool = False,
+    use_html_block: bool = False,
+    convert_inline_code: bool = False,
+) -> str:
     """箇条書きをWordPress Gutenbergのlistブロックに変換します。"""
     tag_name: Literal['ol', 'ul'] = "ol" if ordered else "ul"
-    safe_items: list[str] = [format_inline_text(item.strip()) for item in items if item.strip()]
+    safe_items: list[str] = [
+        format_inline_text(item.strip(), convert_inline_code=convert_inline_code)
+        for item in items
+        if item.strip()
+    ]
 
     if use_html_block:
         list_items: str = "\n".join(f"<li>{item}</li>" for item in safe_items)

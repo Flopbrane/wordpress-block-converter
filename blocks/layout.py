@@ -21,6 +21,7 @@ def create_media_text_block(
     text: str = "",
     media_position: str = "left",
     media_width: int = 40,
+    convert_inline_code: bool = False,
 ) -> str:
     """画像＋文章をWordPressのmedia-textブロックに変換します。"""
     safe_image = escape(image.strip(), quote=True)
@@ -36,9 +37,9 @@ def create_media_text_block(
     content_blocks = []
 
     if title.strip():
-        content_blocks.append(create_heading_block(title, 2))
+        content_blocks.append(create_heading_block(title, 2, convert_inline_code=convert_inline_code))
     if text.strip():
-        content_blocks.append(create_paragraph_block(text))
+        content_blocks.append(create_paragraph_block(text, convert_inline_code=convert_inline_code))
 
     content_html = "\n\n".join(content_blocks)
     return (
@@ -86,13 +87,19 @@ def create_image_columns_block(images: list[dict[str, str]], gap: str = "24px") 
     )
 
 
-def create_cta_block(title: str, text: str, button: str, url: str) -> str:
+def create_cta_block(
+    title: str,
+    text: str,
+    button: str,
+    url: str,
+    convert_inline_code: bool = False,
+) -> str:
     """CTAを見出し、段落、ボタンブロックに変換します。"""
     blocks = []
     if title.strip():
-        blocks.append(create_heading_block(title, 2))
+        blocks.append(create_heading_block(title, 2, convert_inline_code=convert_inline_code))
     if text.strip():
-        blocks.append(create_paragraph_block(text))
+        blocks.append(create_paragraph_block(text, convert_inline_code=convert_inline_code))
     if button.strip() and url.strip():
         safe_url = escape(url.strip(), quote=True)
         safe_button = escape(button.strip())
@@ -109,7 +116,11 @@ def create_cta_block(title: str, text: str, button: str, url: str) -> str:
     return "\n\n".join(blocks)
 
 
-def create_card_columns_block(cards: list[dict[str, str]], gap: str = "24px") -> str:
+def create_card_columns_block(
+    cards: list[dict[str, str]],
+    gap: str = "24px",
+    convert_inline_code: bool = False,
+) -> str:
     """カード型情報をcolumnsブロックに変換します。"""
     clean_cards = [
         card
@@ -126,9 +137,20 @@ def create_card_columns_block(cards: list[dict[str, str]], gap: str = "24px") ->
     for card in clean_cards:
         card_blocks = []
         if card.get("title", "").strip():
-            card_blocks.append(create_heading_block(card["title"], 3))
+            card_blocks.append(
+                create_heading_block(
+                    card["title"],
+                    3,
+                    convert_inline_code=convert_inline_code,
+                )
+            )
         if card.get("text", "").strip():
-            card_blocks.append(create_paragraph_block(card["text"]))
+            card_blocks.append(
+                create_paragraph_block(
+                    card["text"],
+                    convert_inline_code=convert_inline_code,
+                )
+            )
         column_blocks.append(
             "<!-- wp:column -->\n"
             '<div class="wp-block-column">\n'
