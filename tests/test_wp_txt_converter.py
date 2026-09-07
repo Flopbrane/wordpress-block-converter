@@ -61,6 +61,36 @@ def test_convert_wp_txt_links_images_code_and_table() -> None:
     assert "<td>大きな区切り</td>" in save_file
 
 
+def test_convert_wp_txt_emphasis_code_to_html_block() -> None:
+    """強調コードをwp:htmlのpre/codeへ変換するテストです。"""
+    load_file = (
+        "[強調コード]\n"
+        "functions.php\n"
+        "[/強調コード]"
+    )
+
+    save_file = convert_wp_txt_to_gutenberg(load_file)
+
+    assert "<!-- wp:html -->" in save_file
+    assert '<pre class="wp-block-code" style="display:inline-block;' in save_file
+    assert "<code>functions.php</code>" in save_file
+    assert "<!-- /wp:html -->" in save_file
+
+
+def test_convert_wp_txt_emphasis_code_escapes_html_chars() -> None:
+    """強調コード内の<>&をHTMLエスケープするテストです。"""
+    load_file = (
+        "[強調コード]\n"
+        "<p>A & B</p>\n"
+        "[/強調コード]"
+    )
+
+    save_file = convert_wp_txt_to_gutenberg(load_file)
+
+    assert "&lt;p&gt;A &amp; B&lt;/p&gt;" in save_file
+    assert "<code><p>A & B</p></code>" not in save_file
+
+
 def test_convert_wp_txt_ordered_list_and_quote() -> None:
     """番号付きリストと引用を変換するテストです。"""
     load_file = (

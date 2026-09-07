@@ -10,7 +10,7 @@ import csv
 import io
 from html import escape
 
-from blocks.code import create_code_block
+from blocks.code import create_code_block, create_emphasis_code_block
 from blocks.image import create_image_block
 from blocks.list_block import create_list_block
 from blocks.paragraph import create_paragraph_block
@@ -20,7 +20,11 @@ from blocks.spacer import create_spacer_block
 from blocks.table import create_table_block_from_rows
 from dictionaries.wp_txt_dict import (
     WP_TXT_CODE_END,
+    WP_TXT_CODE_OUTPUT_MODE,
+    WP_TXT_CODE_OUTPUT_MODES,
     WP_TXT_CODE_START,
+    WP_TXT_EMPHASIS_CODE_END,
+    WP_TXT_EMPHASIS_CODE_START,
     WP_TXT_HEADING_PATTERN,
     WP_TXT_IMAGE_PATTERN,
     WP_TXT_LINK_PATTERN,
@@ -43,8 +47,10 @@ def convert_wp_txt_to_gutenberg(load_file: str) -> str:
     list_ordered: bool = False
     quote_lines: list[str] = []
     code_lines: list[str] = []
+    emphasis_code_lines: list[str] = []
     table_lines: list[str] = []
     in_code_block = False
+    in_emphasis_code_block = False
     in_table_block = False
 
     for line in load_file.splitlines():
@@ -52,11 +58,20 @@ def convert_wp_txt_to_gutenberg(load_file: str) -> str:
 
         if in_code_block:
             if stripped_line == WP_TXT_CODE_END:
-                blocks.append(create_code_block("\n".join(code_lines)))
+                blocks.append(_create_normal_code_block("\n".join(code_lines)))
                 code_lines = []
                 in_code_block = False
             else:
                 code_lines.append(line)
+            continue
+
+        if in_emphasis_code_block:
+            if stripped_line == WP_TXT_EMPHASIS_CODE_END:
+                blocks.append(create_emphasis_code_block("\n".join(emphasis_code_lines)))
+                emphasis_code_lines = []
+                in_emphasis_code_block = False
+            else:
+                emphasis_code_lines.append(line)
             continue
 
         if in_table_block:
@@ -83,6 +98,14 @@ def convert_wp_txt_to_gutenberg(load_file: str) -> str:
             list_items = []
             quote_lines = []
             in_code_block = True
+            continue
+
+        if stripped_line == WP_TXT_EMPHASIS_CODE_START:
+            _flush_text_blocks(blocks, paragraph_lines, list_items, list_ordered, quote_lines)
+            paragraph_lines = []
+            list_items = []
+            quote_lines = []
+            in_emphasis_code_block = True
             continue
 
         if stripped_line == WP_TXT_TABLE_START:
@@ -179,7 +202,9 @@ def convert_wp_txt_to_gutenberg(load_file: str) -> str:
         paragraph_lines.append(_convert_wp_txt_links(stripped_line))
 
     if in_code_block and code_lines:
-        blocks.append(create_code_block("\n".join(code_lines)))
+        blocks.append(_create_normal_code_block("\n".join(code_lines)))
+    if in_emphasis_code_block and emphasis_code_lines:
+        blocks.append(create_emphasis_code_block("\n".join(emphasis_code_lines)))
     if in_table_block and table_lines:
         _flush_table(blocks, table_lines)
 
@@ -223,6 +248,14 @@ def _flush_table(blocks: list[str], table_lines: list[str]) -> None:
     headers = rows[0]
     body_rows = rows[1:]
     blocks.append(create_table_block_from_rows(headers, body_rows))
+
+
+def _create_normal_code_block(text: str) -> str:
+    if WP_TXT_CODE_OUTPUT_MODE not in WP_TXT_CODE_OUTPUT_MODES:
+        return create_code_block(text)
+    if WP_TXT_CODE_OUTPUT_MODE == "styled_html":
+        return create_emphasis_code_block(text)
+    return create_code_block(text)
 
 
 def _split_table_line(line: str) -> list[str]:

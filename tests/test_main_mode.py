@@ -190,6 +190,32 @@ def test_convert_file_supports_wp_txt(tmp_path: Path) -> None:
     assert "<li>相談</li>" in save_file
 
 
+def test_convert_file_supports_prewp_txt(tmp_path: Path) -> None:
+    """.prewp_txtファイルをマーカー付き平文として変換するテストです。"""
+    load_file_path = tmp_path / "sample.prewp_txt"
+    save_file_path = tmp_path / "sample_wordpress.html"
+    load_file_path.write_text("【サービス紹介】\n\n本文です。", encoding="utf-8")
+
+    convert_file(load_file_path, save_file_path)
+
+    save_file = save_file_path.read_text(encoding="utf-8")
+    assert '<h2 class="wp-block-heading">サービス紹介</h2>' in save_file
+    assert "<p>本文です。</p>" in save_file
+
+
+def test_convert_file_keeps_txt_conversion_as_plain_paragraphs(tmp_path: Path) -> None:
+    """.txtの既存変換を壊さないテストです。"""
+    load_file_path = tmp_path / "sample.txt"
+    save_file_path = tmp_path / "sample_wordpress.html"
+    load_file_path.write_text("これは1つ目の段落です。\n\nこれは2つ目の段落です。", encoding="utf-8")
+
+    convert_file(load_file_path, save_file_path)
+
+    save_file = save_file_path.read_text(encoding="utf-8")
+    assert "<p>これは1つ目の段落です。</p>" in save_file
+    assert "<p>これは2つ目の段落です。</p>" in save_file
+
+
 def test_convert_file_applies_office_mode_like_hi_security(tmp_path: Path) -> None:
     """office modeで事業所WP向け安全化フィルターを通すテストです。"""
     load_file_path = tmp_path / "office.md"

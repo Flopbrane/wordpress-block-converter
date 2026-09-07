@@ -61,6 +61,27 @@ def test_select_converter_detects_wp_txt_from_content() -> None:
     assert '<h2 class="wp-block-heading">サービス紹介</h2>' in save_file
 
 
+def test_select_converter_supports_prewp_txt_extension() -> None:
+    """.prewp_txtをマーカー付き平文として認識するテストです。"""
+    load_file = "【サービス紹介】\n\n本文です。"
+
+    converter = select_converter("sample.prewp_txt", load_file)
+    save_file = converter(load_file)
+
+    assert '<h2 class="wp-block-heading">サービス紹介</h2>' in save_file
+
+
+def test_select_converter_keeps_prewp_txt_as_marked_text_even_with_markdown_heading() -> None:
+    """.prewp_txtではMarkdown風の見出しを自動推測しないテストです。"""
+    load_file = "# タイトル\n\n本文です。"
+
+    converter = select_converter("sample.prewp_txt", load_file)
+    save_file = converter(load_file)
+
+    assert '<h1 class="wp-block-heading">タイトル</h1>' not in save_file
+    assert "<p># タイトル</p>" in save_file
+
+
 def test_select_converter_detects_csv_from_content() -> None:
     """拡張子がtxtでもCSVらしければ表変換するテストです。"""
     load_file = "名前,価格\n商品A,1000"

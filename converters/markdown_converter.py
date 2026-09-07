@@ -10,8 +10,8 @@ import re
 from collections.abc import Callable
 from typing import Any, cast
 
-from converters.markdown_layout_converter import convert_markdown_layout_to_gutenberg
 from blocks.paragraph import create_paragraph_block
+from converters.markdown_layout_converter import convert_markdown_layout_to_gutenberg
 from dictionaries.html_dict import DIRECT_URL_RULES, EMBED_PROVIDER_RULES
 from dictionaries.markdown_dict import (
     MARKDOWN_CODE_RULE,

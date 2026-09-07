@@ -22,7 +22,10 @@ from converters.wp_txt_converter import convert_wp_txt_to_gutenberg
 from dictionaries.html_dict import HTML_EXTENSIONS
 from dictionaries.json_dict import JSON_EXTENSIONS
 from dictionaries.markdown_dict import MARKDOWN_EXTENSIONS
-from dictionaries.separated_values_dict import SEPARATED_VALUES_EXTENSIONS, SNIFF_DELIMITERS
+from dictionaries.separated_values_dict import (
+    SEPARATED_VALUES_EXTENSIONS,
+    SNIFF_DELIMITERS,
+)
 from dictionaries.text_dict import TEXT_EXTENSIONS
 from dictionaries.wp_txt_dict import (
     WP_TXT_CODE_START,
@@ -33,9 +36,9 @@ from dictionaries.wp_txt_dict import (
 )
 
 SUPPORTED_FILE_TYPES: list[tuple[str, str]] = [
-    ("対応ファイル", "*.txt *.wp_txt *.wptxt *.md *.markdown *.html *.htm *.wp_html *.csv *.ssv *.tsv *.psv *.pipesv *.json"),
+    ("対応ファイル", "*.txt *.prewp_txt *.wp_txt *.wptxt *.md *.markdown *.html *.htm *.wp_html *.csv *.ssv *.tsv *.psv *.pipesv *.json"),
     ("テキスト", "*.txt"),
-    ("WP-TXT", "*.wp_txt *.wptxt"),
+    ("マーカー付き平文", "*.prewp_txt *.wp_txt *.wptxt"),
     ("Markdown", "*.md *.markdown"),
     ("HTML", "*.html *.htm *.wp_html"),
     ("区切り値ファイル", "*.csv *.ssv *.tsv *.psv *.pipesv"),
@@ -55,13 +58,15 @@ CSV_MIN_ROWS = 2
 def select_converter(load_file_path: str | Path, load_file: str | None = None) -> Callable[[str], str]:
     """load_file_pathと内容から、適切なconverterを返します。"""
     file_extension: str = Path(load_file_path).suffix.lower()
+    if load_file is not None and _looks_like_existing_wordpress_html(load_file, file_extension):
+        return keep_existing_wordpress_html
+    if file_extension in WP_TXT_EXTENSIONS:
+        return convert_wp_txt_to_gutenberg
     if load_file is not None:
         content_converter: Callable[[str], str] | None = _select_converter_by_content(load_file, file_extension)
         if content_converter is not None:
             return content_converter
 
-    if file_extension in WP_TXT_EXTENSIONS:
-        return convert_wp_txt_to_gutenberg
     if file_extension in TEXT_EXTENSIONS:
         return convert_text_to_gutenberg
     if file_extension in MARKDOWN_EXTENSIONS:

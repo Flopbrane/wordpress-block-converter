@@ -150,7 +150,7 @@ def _create_table_from_dict_rows(rows: list[Any]) -> str:
 
     headers: list[str] = []
     for row in dict_rows:
-        for key in row.keys():
+        for key in row:
             if key not in headers:
                 headers.append(str(key))
 

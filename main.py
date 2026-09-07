@@ -66,7 +66,18 @@ def main() -> None:
     )
     parser.add_argument("--gui", action="store_true", help="ファイル選択画面で変換します")
     parser.add_argument("--repair", action="store_true", help="既存のWordPressコードを修復します")
+    parser.add_argument(
+        "--edit-text",
+        action="store_true",
+        help=".txtをWordPress変換用に整えるtext_editorを開きます",
+    )
     args: argparse.Namespace = parser.parse_args()
+
+    if args.edit_text:
+        from text_editor.main import run_text_editor
+
+        run_text_editor(args.load_file_path)
+        return
 
     if args.gui or not args.load_file_path or not args.save_file_path:
         run_gui(convert_file)

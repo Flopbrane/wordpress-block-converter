@@ -9,7 +9,7 @@ This tool is designed for users who prefer preparing stable WordPress block HTML
 ## Features
 
 - Convert plain text paragraphs into WordPress paragraph blocks
-- Convert WP-TXT `.wp_txt` files into headings, paragraphs, lists, quotes, code, tables, and images
+- Convert marked plain text `.prewp_txt`, `.wp_txt`, and `.wptxt` files into headings, paragraphs, lists, quotes, code, tables, and images
 - Convert Markdown headings, paragraphs, lists, quotes, code blocks, tables, separators, images, and shortcodes
 - Convert simple HTML headings, paragraphs, lists, quotes, code blocks, tables, images, links, and shortcodes
 - Convert CSV/SSV/TSV/PSV separated-value files into table blocks
@@ -28,7 +28,7 @@ This tool is designed for users who prefer preparing stable WordPress block HTML
 | Format           | Extensions                                |
 | ---------------- | ----------------------------------------- |
 | Plain text       | `.txt`                                    |
-| WP-TXT           | `.wp_txt`, `.wptxt`                      |
+| Marked plain text | `.prewp_txt`, `.wp_txt`, `.wptxt`       |
 | Markdown         | `.md`, `.markdown`                        |
 | HTML             | `.html`, `.htm`                           |
 | Separated values | `.csv`, `.ssv`, `.tsv`, `.psv`, `.pipesv` |
@@ -36,9 +36,9 @@ This tool is designed for users who prefer preparing stable WordPress block HTML
 
 ## Rules for Plain Text
 
-For ordinary `.txt` files, the converter keeps the rules simple: blank lines become paragraph breaks. If you want to add headings, lists, quotes, code blocks, tables, links, or images before conversion, use the marked plain-text format described in [HOW_TO_USE_FOR_PLAIN_TEXT.md](HOW_TO_USE_FOR_PLAIN_TEXT.md).
+For ordinary `.txt` files, the converter keeps the rules simple: blank lines become paragraph breaks. If you want to add headings, lists, quotes, code blocks, tables, links, or images before conversion, open the file in `text_editor` and add markers before converting. The marker rules are described in [HOW_TO_USE_FOR_PLAIN_TEXT.md](HOW_TO_USE_FOR_PLAIN_TEXT.md).
 
-Save marked plain text as `.wp_txt` or `.wptxt`. A plain `.txt` file is intentionally treated as paragraph-only text.
+Save marked plain text as `.prewp_txt`. Existing `.wp_txt` and `.wptxt` files are still supported for compatibility. A plain `.txt` file is intentionally treated as paragraph-only text.
 
 ## Version Support
 
@@ -80,9 +80,9 @@ Save marked plain text as `.wp_txt` or `.wptxt`. A plain `.txt` file is intentio
 - Line breaks inside a paragraph become `<br><br>`.
 - A 24px spacer block is inserted between paragraphs.
 
-### WP-TXT
+### Marked Plain Text
 
-WP-TXT is a lightly marked text format for writing WordPress articles more predictably than plain `.txt`.
+Marked plain text is a lightly marked text format for writing WordPress articles more predictably than plain `.txt`. Use `.prewp_txt` for new files; `.wp_txt` and `.wptxt` remain supported.
 
 | Syntax | Output |
 |---|---|
@@ -97,6 +97,7 @@ WP-TXT is a lightly marked text format for writing WordPress articles more predi
 | `[リンク:Label|URL]` | Link |
 | `[画像:URL|Alt text]` | Image |
 | `[コード]` to `[/コード]` | Code block |
+| `[強調コード]` to `[/強調コード]` | Emphasized code block |
 | `[表]` to `[/表]` | Table |
 
 Example:
@@ -119,6 +120,10 @@ See [リンク:Official site|https://example.com/] for details.
 [コード]
 <p>This is a paragraph.</p>
 [/コード]
+
+[強調コード]
+functions.php
+[/強調コード]
 
 [表]
 Item|Description
@@ -259,6 +264,12 @@ python .\main.py
 
 ```powershell
 python .\main.py .\sample.md .\sample_wordpress.html
+```
+
+To open the helper editor for a plain text draft:
+
+```powershell
+python .\main.py .\sample.txt --edit-text
 ```
 
 ### Conversion Modes

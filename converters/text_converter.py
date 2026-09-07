@@ -108,7 +108,6 @@ def _fix_heading_start_line(line: str, following_lines: list[str]) -> str:
 
 
 def _fix_code_line(line: str) -> str:
-    stripped_line = line.lstrip()
     if "wp-block-separator" in line:
         return line.replace("<code>", "").replace("</code>", "")
 

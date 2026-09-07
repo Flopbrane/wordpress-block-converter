@@ -14,6 +14,7 @@ from tkinter import filedialog, messagebox
 
 from dictionaries.hi_security_dict import HIGH_SECURITY_MODE, MIDDLE_MODE, NORMAL_MODE
 from file_checker import SUPPORTED_FILE_TYPES
+from text_editor.main import run_text_editor
 
 
 def run_gui(convert_file: Callable[[str | Path, str | Path, str, bool], None]) -> None:
@@ -32,6 +33,11 @@ def run_gui(convert_file: Callable[[str | Path, str | Path, str, bool], None]) -
     )
     if not load_file_path:
         messagebox.showinfo("キャンセル", "変換をキャンセルしました。")
+        return
+
+    if Path(load_file_path).suffix.lower() == ".txt" and _should_open_text_editor(root):
+        root.destroy()
+        run_text_editor(load_file_path)
         return
 
     default_save_file_path: Path = create_default_save_file_path(
@@ -150,3 +156,14 @@ def _select_mode_with_gui(root: tk.Tk) -> tuple[str, bool]:
     mode_window.protocol("WM_DELETE_WINDOW", mode_window.destroy)
     root.wait_window(mode_window)
     return str(result["mode"]), bool(result["repair_mode"])
+
+
+def _should_open_text_editor(root: tk.Tk) -> bool:
+    """通常の.txtをtext_editorで開くか確認します。"""
+    return messagebox.askyesno(
+        "text_editorで開きますか？",
+        "通常の .txt ファイルです。\n\n"
+        "WordPress変換用にマーカーを付けるため、text_editorで開きますか？\n\n"
+        "「いいえ」を選ぶと、従来通り通常段落として変換します。",
+        parent=root,
+    )
