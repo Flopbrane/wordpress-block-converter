@@ -65,11 +65,11 @@ def apply_rewrite_style(
     correct_data_path: str | Path | None = None,
 ) -> str:
     """modeに応じて、WordPressに貼りやすい表示スタイルへ整えます。"""
-    normalized_mode = normalize_conversion_mode(mode)
+    normalized_mode: str = normalize_conversion_mode(mode)
     if normalized_mode not in REWRITE_STYLE_MODES:
         return save_file
 
-    code_wrap_ignore_words = load_code_wrap_ignore_words(correct_data_path)
+    code_wrap_ignore_words: set[str] = load_code_wrap_ignore_words(correct_data_path)
     save_file = _normalize_heading_blocks(save_file)
     return PARAGRAPH_BLOCK_PATTERN.sub(
         lambda paragraph_match: _rewrite_paragraph_block(
@@ -82,16 +82,19 @@ def apply_rewrite_style(
 
 def load_code_wrap_ignore_words(correct_data_path: str | Path | None = None) -> set[str]:
     """correct_data.jsonからcode囲み除外ワードを読み込みます。"""
-    load_path = Path(correct_data_path) if correct_data_path is not None else _find_correct_data_path()
+    load_path: Path | None = (
+        Path(correct_data_path)
+        if correct_data_path is not None
+        else _find_correct_data_path())
     if load_path is None or not load_path.exists():
         return DEFAULT_CODE_WRAP_IGNORE_WORDS.copy()
 
     try:
-        correct_data = json.loads(load_path.read_text(encoding="utf-8-sig"))
+        correct_data: dict[str, Any] = json.loads(load_path.read_text(encoding="utf-8-sig"))
     except (OSError, json.JSONDecodeError):
         return DEFAULT_CODE_WRAP_IGNORE_WORDS.copy()
 
-    ignore_words = _extract_code_wrap_ignore_words(correct_data)
+    ignore_words: set[str] = _extract_code_wrap_ignore_words(correct_data)
     if not ignore_words:
         return DEFAULT_CODE_WRAP_IGNORE_WORDS.copy()
 
@@ -100,7 +103,7 @@ def load_code_wrap_ignore_words(correct_data_path: str | Path | None = None) -> 
 
 def _find_correct_data_path() -> Path | None:
     for base_path in _candidate_correct_data_dirs():
-        correct_data_path = base_path / CORRECT_DATA_FILE_NAME
+        correct_data_path: Path = base_path / CORRECT_DATA_FILE_NAME
         if correct_data_path.exists():
             return correct_data_path
 
@@ -121,7 +124,7 @@ def _extract_code_wrap_ignore_words(correct_data: Any) -> set[str]:
     if not isinstance(correct_data, dict):
         return set()
 
-    raw_words = correct_data.get("code_wrap_ignore_words", [])
+    raw_words: list[Any] = correct_data.get("code_wrap_ignore_words", [])
     if not isinstance(raw_words, list):
         return set()
 
@@ -166,12 +169,12 @@ def _rewrite_paragraph_block(
     paragraph_match: re.Match[str],
     code_wrap_ignore_words: set[str],
 ) -> str:
-    start_comment = paragraph_match.group(1)
-    start_tag = paragraph_match.group(2)
-    body = paragraph_match.group(3)
-    end_tag = paragraph_match.group(4)
-    end_comment = paragraph_match.group(5)
-    rewritten_body = _rewrite_paragraph_body(body, code_wrap_ignore_words)
+    start_comment: str | Any = paragraph_match.group(1)
+    start_tag: str | Any = paragraph_match.group(2)
+    body: str | Any = paragraph_match.group(3)
+    end_tag: str | Any = paragraph_match.group(4)
+    end_comment: str | Any = paragraph_match.group(5)
+    rewritten_body: str = _rewrite_paragraph_body(body, code_wrap_ignore_words)
     return f"{start_comment}{start_tag}{rewritten_body}{end_tag}{end_comment}"
 
 
@@ -181,7 +184,7 @@ def _rewrite_paragraph_body(body: str, code_wrap_ignore_words: set[str]) -> str:
 
     for line in body.splitlines():
         if line.strip() and found_first_text_line:
-            line = _remove_leading_spaces(line)
+            line: str = _remove_leading_spaces(line)
         elif line.strip():
             found_first_text_line = True
         rewritten_lines.append(_rewrite_paragraph_line(line, code_wrap_ignore_words))
@@ -195,25 +198,25 @@ def _remove_leading_spaces(line: str) -> str:
 
 def _rewrite_paragraph_line(line: str, code_wrap_ignore_words: set[str]) -> str:
     trailing_break = ""
-    break_match = TRAILING_BREAKS_PATTERN.search(line)
+    break_match: re.Match[str] | None = TRAILING_BREAKS_PATTERN.search(line)
     if break_match:
-        trailing_break = _select_line_break(line[:break_match.start()])
+        trailing_break: str = _select_line_break(line[:break_match.start()])
         line = line[:break_match.start()]
 
-    rewritten_line = _rewrite_inline_code_scope(line)
+    rewritten_line: str = _rewrite_inline_code_scope(line)
     rewritten_line = _wrap_alphabet_text(rewritten_line, code_wrap_ignore_words)
     return f"{rewritten_line}{trailing_break}"
 
 
 def _rewrite_inline_code_scope(line: str) -> str:
     def replace_code(code_match: re.Match[str]) -> str:
-        code_body = code_match.group(1)
-        escaped_end_index = code_body.find("&gt;")
+        code_body: str | Any = code_match.group(1)
+        escaped_end_index: int | Any = code_body.find("&gt;")
         if escaped_end_index == -1:
             return code_match.group(0)
 
-        code_text = code_body[:escaped_end_index + len("&gt;")]
-        description_text = code_body[escaped_end_index + len("&gt;"):]
+        code_text: str | Any = code_body[:escaped_end_index + len("&gt;")]
+        description_text: str | Any = code_body[escaped_end_index + len("&gt;"):]
         if not description_text.strip() or "&lt;" in description_text:
             return code_match.group(0)
 
@@ -223,7 +226,7 @@ def _rewrite_inline_code_scope(line: str) -> str:
 
 
 def _wrap_alphabet_text(line: str, code_wrap_ignore_words: set[str]) -> str:
-    parts = PROTECTED_INLINE_HTML_PATTERN.split(line)
+    parts: list[str | Any] = PROTECTED_INLINE_HTML_PATTERN.split(line)
     return "".join(
         part if PROTECTED_INLINE_HTML_PATTERN.fullmatch(part) else _wrap_text_part(
             part,

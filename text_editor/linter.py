@@ -11,18 +11,31 @@ from dataclasses import dataclass
 from typing import Literal
 
 from dictionaries.wp_txt_dict import (
+    WP_TXT_BOLD_END,
+    WP_TXT_BOLD_START,
+    WP_TXT_BOX_END,
+    WP_TXT_BOX_START,
     WP_TXT_CODE_END,
     WP_TXT_CODE_START,
     WP_TXT_EMPHASIS_CODE_END,
     WP_TXT_EMPHASIS_CODE_START,
     WP_TXT_HTML_END,
+    WP_TXT_HTML_EXEC_END,
+    WP_TXT_HTML_EXEC_START,
     WP_TXT_HTML_START,
+    WP_TXT_IMAGE_ROW_END,
     WP_TXT_LIST_END,
     WP_TXT_LIST_START,
+    WP_TXT_NOTICE_END,
+    WP_TXT_NOTICE_START,
     WP_TXT_ORDERED_LIST_END,
     WP_TXT_ORDERED_LIST_START,
     WP_TXT_PARAGRAPH_END,
     WP_TXT_PARAGRAPH_START,
+    WP_TXT_STEPS_END,
+    WP_TXT_STEPS_START,
+    WP_TXT_SUPPLEMENT_END,
+    WP_TXT_SUPPLEMENT_START,
     WP_TXT_TABLE_END,
     WP_TXT_TABLE_START,
 )
@@ -51,6 +64,8 @@ class LintIssue:
 def lint_prewp_txt(load_file: str) -> list[LintIssue]:
     """prewp_txtのマーカー崩れを検出します。"""
     issues: list[LintIssue] = []
+    _check_marker_pair(load_file, WP_TXT_BOX_START, WP_TXT_BOX_END, "囲い込み", issues)
+    _check_marker_pair(load_file, WP_TXT_BOLD_START, WP_TXT_BOLD_END, "太字", issues)
     _check_marker_pair(load_file, WP_TXT_CODE_START, WP_TXT_CODE_END, "コード", issues)
     _check_marker_pair(
         load_file,
@@ -74,7 +89,12 @@ def lint_prewp_txt(load_file: str) -> list[LintIssue]:
         "段落",
         issues,
     )
+    _check_marker_pair(load_file, WP_TXT_HTML_EXEC_START, WP_TXT_HTML_EXEC_END, "HTML", issues)
     _check_marker_pair(load_file, WP_TXT_HTML_START, WP_TXT_HTML_END, "HTML", issues)
+    _check_marker_pair(load_file, WP_TXT_NOTICE_START, WP_TXT_NOTICE_END, "注意", issues)
+    _check_marker_pair(load_file, WP_TXT_SUPPLEMENT_START, WP_TXT_SUPPLEMENT_END, "補足", issues)
+    _check_marker_pair(load_file, WP_TXT_STEPS_START, WP_TXT_STEPS_END, "手順", issues)
+    _check_marker_pair(load_file, "[画像横並び:", WP_TXT_IMAGE_ROW_END, "画像横並び", issues)
     _check_marker_pair(load_file, WP_TXT_TABLE_START, WP_TXT_TABLE_END, "表", issues)
     _check_empty_blocks(load_file, issues)
     _check_link_markers(load_file, issues)
@@ -126,10 +146,16 @@ def _check_marker_pair(
 def _check_empty_blocks(load_file: str, issues: list[LintIssue]) -> None:
     for start_marker, end_marker, marker_name in (
         (WP_TXT_CODE_START, WP_TXT_CODE_END, "コード"),
+        (WP_TXT_BOX_START, WP_TXT_BOX_END, "囲い込み"),
+        (WP_TXT_BOLD_START, WP_TXT_BOLD_END, "太字"),
         (WP_TXT_EMPHASIS_CODE_START, WP_TXT_EMPHASIS_CODE_END, "強調コード"),
+        (WP_TXT_HTML_EXEC_START, WP_TXT_HTML_EXEC_END, "HTML"),
         (WP_TXT_LIST_START, WP_TXT_LIST_END, "リスト"),
+        (WP_TXT_NOTICE_START, WP_TXT_NOTICE_END, "注意"),
         (WP_TXT_ORDERED_LIST_START, WP_TXT_ORDERED_LIST_END, "番号リスト"),
         (WP_TXT_PARAGRAPH_START, WP_TXT_PARAGRAPH_END, "段落"),
+        (WP_TXT_STEPS_START, WP_TXT_STEPS_END, "手順"),
+        (WP_TXT_SUPPLEMENT_START, WP_TXT_SUPPLEMENT_END, "補足"),
         (WP_TXT_HTML_START, WP_TXT_HTML_END, "HTML"),
         (WP_TXT_TABLE_START, WP_TXT_TABLE_END, "表"),
     ):

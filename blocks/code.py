@@ -30,14 +30,14 @@ def create_code_block(text: str) -> str:
 
 
 def create_emphasis_code_block(text: str) -> str:
-    """強調コードをWordPress Gutenbergのcodeブロックに変換します。"""
+    """強調コードをstyle付きpre/codeのHTMLブロックに変換します。"""
     safe_text = escape_code_text(text.strip())
     style = (
-        "display:inline-block; border:1px solid #999; padding:16px; "
-        "border-radius:8px; background-color:#f9f9f9;"
+        "display:inline-block;border:1px solid #999;padding:16px;"
+        "border-radius:8px;background-color:#f9f9f9;"
     )
     return (
-        "<!-- wp:code -->\n"
+        "<!-- wp:html -->\n"
         f'<pre class="wp-block-code" style="{style}"><code>{safe_text}</code></pre>\n'
-        "<!-- /wp:code -->"
+        "<!-- /wp:html -->"
     )

@@ -15,6 +15,7 @@ URL_PATTERN: re.Pattern[str] = re.compile(r"(?<![\"'=])\bhttps?://[^\s<]+")
 BOLD_PATTERN: re.Pattern[str] = re.compile(r"\*\*(.+?)\*\*")
 ITALIC_PATTERN: re.Pattern[str] = re.compile(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)")
 INLINE_CODE_PATTERN: re.Pattern[str] = re.compile(r"`([^`\n]+)`")
+PREWP_BOLD_PATTERN: re.Pattern[str] = re.compile(r"\[太字](.+?)\[/太字]")
 
 
 def format_inline_text(
@@ -63,6 +64,7 @@ def _create_link_html(label: str, url: str) -> str:
 def _format_emphasis(text: str, convert_inline_code: bool = False) -> str:
     if convert_inline_code:
         text = INLINE_CODE_PATTERN.sub(_replace_backticks_with_code_tag, text)
+    text = PREWP_BOLD_PATTERN.sub(r"<strong>\1</strong>", text)
     text = BOLD_PATTERN.sub(r"<strong>\1</strong>", text)
     return ITALIC_PATTERN.sub(r"<em>\1</em>", text)
 

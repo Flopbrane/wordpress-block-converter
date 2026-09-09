@@ -68,7 +68,7 @@ def test_convert_wp_txt_links_images_code_and_table() -> None:
 
 
 def test_convert_wp_txt_emphasis_code_to_html_block() -> None:
-    """強調コードをwp:codeのpre/codeへ変換するテストです。"""
+    """強調コードをwp:html内のstyle付きpre/codeへ変換するテストです。"""
     load_file = (
         "[強調コード]\n"
         "functions.php\n"
@@ -77,24 +77,25 @@ def test_convert_wp_txt_emphasis_code_to_html_block() -> None:
 
     save_file = convert_wp_txt_to_gutenberg(load_file)
 
-    assert "<!-- wp:code -->" in save_file
+    assert "<!-- wp:html -->" in save_file
     assert '<pre class="wp-block-code" style="display:inline-block;' in save_file
     assert "<code>functions.php</code>" in save_file
-    assert "<!-- /wp:code -->" in save_file
+    assert "<!-- /wp:html -->" in save_file
 
 
 def test_convert_wp_txt_emphasis_code_escapes_html_chars() -> None:
-    """強調コード内の<>&をHTMLエスケープするテストです。"""
+    """強調コード内の<>&をescapeし、引用符は保持するテストです。"""
     load_file = (
         "[強調コード]\n"
-        "<p>A & B</p>\n"
+        '<p data-name="A">A & B</p>\n'
         "[/強調コード]"
     )
 
     save_file = convert_wp_txt_to_gutenberg(load_file)
 
-    assert "&lt;p&gt;A &amp; B&lt;/p&gt;" in save_file
-    assert "<code><p>A & B</p></code>" not in save_file
+    assert '&lt;p data-name="A"&gt;A &amp; B&lt;/p&gt;' in save_file
+    assert "<code><p" not in save_file
+    assert "&quot;" not in save_file
 
 
 def test_convert_wp_txt_ordered_list_and_quote() -> None:
@@ -222,6 +223,112 @@ def test_convert_wp_txt_explicit_html_block_keeps_raw_html() -> None:
     assert "<!-- /wp:html -->" in save_file
 
 
+def test_convert_wp_txt_box_wraps_text_in_styled_html_block() -> None:
+    """囲い込みマーカーを枠付きHTMLブロックへ変換するテストです。"""
+    load_file = (
+        "[囲い込み]\n"
+        "注意文です。\n"
+        "<script>alert(\"x\")</script>\n\n"
+        "次の段落です。\n"
+        "[/囲い込み]"
+    )
+
+    save_file = convert_wp_txt_to_gutenberg(load_file)
+
+    assert "<!-- wp:html -->" in save_file
+    assert '<div style="border:1px solid #999;padding:16px;' in save_file
+    assert "注意文です。<br>&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;" in save_file
+    assert "<br><br>次の段落です。" in save_file
+    assert "<script>" not in save_file
+    assert "[囲い込み]" not in save_file
+    assert "[/囲い込み]" not in save_file
+    assert "<!-- /wp:html -->" in save_file
+
+
+def test_convert_wp_txt_html_exec_block_keeps_raw_html() -> None:
+    """[HTML]は実行HTMLとしてwp:htmlへ出力するテストです。"""
+    load_file = (
+        "[HTML]\n"
+        '<div style="display:flex;gap:24px;">HTML本文</div>\n'
+        "[/HTML]"
+    )
+
+    save_file = convert_wp_txt_to_gutenberg(load_file)
+
+    assert "<!-- wp:html -->" in save_file
+    assert '<div style="display:flex;gap:24px;">HTML本文</div>' in save_file
+    assert "&lt;div" not in save_file
+    assert "<!-- /wp:html -->" in save_file
+
+
+def test_convert_wp_txt_bold_marker_inside_paragraph() -> None:
+    """[太字]を本文中のstrongへ変換するテストです。"""
+    save_file = convert_wp_txt_to_gutenberg("これは[太字]重要[/太字]です。")
+
+    assert "<p>これは<strong>重要</strong>です。</p>" in save_file
+    assert "[太字]" not in save_file
+    assert "[/太字]" not in save_file
+
+
+def test_convert_wp_txt_notice_and_supplement_blocks() -> None:
+    """注意枠と補足枠を意味付きの枠へ変換するテストです。"""
+    load_file = (
+        "[注意]\n"
+        "保存前に確認してください。\n"
+        "[/注意]\n\n"
+        "[補足]\n"
+        "必要に応じて使います。\n"
+        "[/補足]"
+    )
+
+    save_file = convert_wp_txt_to_gutenberg(load_file)
+
+    assert save_file.count("<!-- wp:html -->") == 2
+    assert "<strong>注意</strong><br>保存前に確認してください。" in save_file
+    assert "<strong>補足</strong><br>必要に応じて使います。" in save_file
+    assert "[注意]" not in save_file
+    assert "[補足]" not in save_file
+
+
+def test_convert_wp_txt_steps_block_to_ordered_list() -> None:
+    """[手順]を番号付きリストへ変換するテストです。"""
+    load_file = (
+        "[手順]\n"
+        "管理画面を開く\n"
+        "投稿を確認する\n"
+        "保存する\n"
+        "[/手順]"
+    )
+
+    save_file = convert_wp_txt_to_gutenberg(load_file)
+
+    assert '<!-- wp:list {"ordered":true} -->' in save_file
+    assert "<li>管理画面を開く</li>" in save_file
+    assert "<li>投稿を確認する</li>" in save_file
+    assert "<li>保存する</li>" in save_file
+
+
+def test_convert_wp_txt_image_row_block() -> None:
+    """[画像横並び]をgap付きHTMLブロックへ変換するテストです。"""
+    load_file = (
+        "[画像横並び:24px]\n"
+        "https://example.com/a.jpg\n"
+        "[画像:https://example.com/b.jpg|画像B]\n"
+        "[画像:画像C|https://example.com/c.jpg]\n"
+        "[/画像横並び]"
+    )
+
+    save_file = convert_wp_txt_to_gutenberg(load_file)
+
+    assert "<!-- wp:html -->" in save_file
+    assert 'style="display:flex;gap:24px;' in save_file
+    assert '<img src="https://example.com/a.jpg" alt=""' in save_file
+    assert '<img src="https://example.com/b.jpg" alt="画像B"' in save_file
+    assert '<img src="https://example.com/c.jpg" alt="画像C"' in save_file
+    assert "[画像横並び:24px]" not in save_file
+    assert "[/画像横並び]" not in save_file
+
+
 def test_convert_wp_txt_separator_marker() -> None:
     """---をseparatorへ変換するテストです。"""
     save_file = convert_wp_txt_to_gutenberg("前文\n\n---\n\n後文")
@@ -270,6 +377,27 @@ def test_convert_wp_txt_block_comment_pairs_are_balanced() -> None:
     starts, ends = _count_block_comments(save_file)
 
     assert starts == ends
+
+
+def test_convert_wp_txt_code_and_emphasis_code_use_different_wp_blocks() -> None:
+    """通常コードと強調コードを別のWordPressブロックとして出力するテストです。"""
+    load_file = (
+        "[コード]\n"
+        "print(\"hello\")\n"
+        "[/コード]\n\n"
+        "[強調コード]\n"
+        '"mediaId":123\n'
+        "[/強調コード]"
+    )
+
+    save_file = convert_wp_txt_to_gutenberg(load_file)
+
+    assert save_file.count("<!-- wp:code -->") == 1
+    assert save_file.count("<!-- /wp:code -->") == 1
+    assert save_file.count("<!-- wp:html -->") == 1
+    assert save_file.count("<!-- /wp:html -->") == 1
+    assert 'print("hello")' in save_file
+    assert '"mediaId":123' in save_file
 
 
 def test_convert_wp_txt_can_render_editor_text_without_file_save() -> None:

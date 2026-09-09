@@ -11,7 +11,7 @@ from pathlib import Path
 from tkinter import filedialog, messagebox
 
 from converters.wp_txt_converter import convert_wp_txt_to_gutenberg
-from text_editor.linter import format_lint_issues, has_errors, lint_prewp_txt
+from text_editor.linter import LintIssue, format_lint_issues, has_errors, lint_prewp_txt
 from text_editor.marker_menu import MarkerMenu
 
 
@@ -36,7 +36,7 @@ class TextEditorFrame(tk.Frame):
         MarkerMenu(self.text_area)
 
     def _create_menu(self) -> None:
-        root = self.winfo_toplevel()
+        root: tk.Tk | tk.Toplevel = self.winfo_toplevel()
         menu_bar = tk.Menu(root)
         file_menu = tk.Menu(menu_bar, tearoff=False)
         file_menu.add_command(label="開く", command=self.ask_open_file)
@@ -51,7 +51,7 @@ class TextEditorFrame(tk.Frame):
 
     def ask_open_file(self) -> None:
         """開くファイルを選択します。"""
-        load_file_path = filedialog.askopenfilename(
+        load_file_path: str = filedialog.askopenfilename(
             title="開くファイルを選んでください",
             filetypes=[
                 ("テキスト", "*.txt *.prewp_txt *.wp_txt *.wptxt"),
@@ -64,7 +64,7 @@ class TextEditorFrame(tk.Frame):
     def open_file(self, load_file_path: str | Path) -> None:
         """ファイルを読み込んでエディタに表示します。"""
         self.current_file_path = Path(load_file_path)
-        load_file = self.current_file_path.read_text(encoding="utf-8-sig")
+        load_file: str = self.current_file_path.read_text(encoding="utf-8-sig")
         self.text_area.delete("1.0", "end")
         self.text_area.insert("1.0", load_file)
         self.winfo_toplevel().title(f"text_editor - {self.current_file_path}")
@@ -77,7 +77,7 @@ class TextEditorFrame(tk.Frame):
 
     def save_as(self) -> bool:
         """名前を付けて保存します。"""
-        save_file_path = filedialog.asksaveasfilename(
+        save_file_path: str = filedialog.asksaveasfilename(
             title="保存先を選んでください",
             defaultextension=".prewp_txt",
             filetypes=[
@@ -96,7 +96,7 @@ class TextEditorFrame(tk.Frame):
         initial_file = "article.prewp_txt"
         initial_dir = None
         if self.current_file_path:
-            initial_file = f"{self.current_file_path.stem}.prewp_txt"
+            initial_file: str = f"{self.current_file_path.stem}.prewp_txt"
             initial_dir = str(self.current_file_path.parent)
 
         save_file_path = filedialog.asksaveasfilename(
@@ -111,8 +111,8 @@ class TextEditorFrame(tk.Frame):
         return self._save_to_path(Path(save_file_path).with_suffix(".prewp_txt"))
 
     def _save_to_path(self, save_file_path: Path) -> bool:
-        save_file = self.text_area.get("1.0", "end-1c")
-        issues = lint_prewp_txt(save_file)
+        save_file: str = self.text_area.get("1.0", "end-1c")
+        issues: list[LintIssue] = lint_prewp_txt(save_file)
         if issues:
             issue_text = format_lint_issues(issues)
             if has_errors(issues):
@@ -139,10 +139,10 @@ class TextEditorFrame(tk.Frame):
 
     def convert_to_wordpress_html(self) -> bool:
         """エディタ上の文字列を保存せず、そのままWordPress HTMLへ変換します。"""
-        load_file = self.text_area.get("1.0", "end-1c")
-        issues = lint_prewp_txt(load_file)
+        load_file: str = self.text_area.get("1.0", "end-1c")
+        issues: list[LintIssue] = lint_prewp_txt(load_file)
         if issues:
-            issue_text = format_lint_issues(issues)
+            issue_text: str = format_lint_issues(issues)
             if has_errors(issues):
                 should_convert = messagebox.askyesno(
                     "lintエラーがあります",
@@ -154,8 +154,8 @@ class TextEditorFrame(tk.Frame):
             else:
                 messagebox.showwarning("lint警告", issue_text, parent=self.winfo_toplevel())
 
-        default_save_file_path = self._create_default_wordpress_save_file_path()
-        save_file_path = filedialog.asksaveasfilename(
+        default_save_file_path: Path = self._create_default_wordpress_save_file_path()
+        save_file_path: str = filedialog.asksaveasfilename(
             title="WordPress HTMLの保存先を選んでください",
             defaultextension=".wp_html",
             initialfile=default_save_file_path.name,
@@ -170,7 +170,7 @@ class TextEditorFrame(tk.Frame):
             return False
 
         try:
-            save_file = convert_wp_txt_to_gutenberg(load_file)
+            save_file: str = convert_wp_txt_to_gutenberg(load_file)
         except (ValueError, TypeError) as error:
             messagebox.showerror("変換エラー", str(error), parent=self.winfo_toplevel())
             return False
@@ -181,6 +181,6 @@ class TextEditorFrame(tk.Frame):
 
     def _create_default_wordpress_save_file_path(self) -> Path:
         if self.current_file_path:
-            save_file_name = f"{self.current_file_path.stem}_wordpress.wp_html"
+            save_file_name: str = f"{self.current_file_path.stem}_wordpress.wp_html"
             return self.current_file_path.with_name(save_file_name)
         return Path.cwd() / "article_wordpress.wp_html"
