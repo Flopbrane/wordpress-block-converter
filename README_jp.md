@@ -163,7 +163,10 @@ Ver.1.4では、`:::名前` から `:::` までを1つのレイアウト指定�
 
 - `:::image_text_left`: 画像左、文章右
 - `:::image_text_right`: 画像右、文章左
-- `:::image_row_3`: 画像横並び
+- `:::image_row_3_gap`: 画像3枚、隙間あり
+- `:::image_row_3_no_gap`: 画像3枚、隙間なし
+- `:::float_image_left`: 画像左回り込み
+- `:::float_image_right`: 画像右回り込み
 - `:::cta`: CTA見出し、本文、ボタン
 - `:::faq`: FAQ
 - `:::cards`: カード型レイアウト
@@ -177,6 +180,16 @@ alt: サービス紹介画像
 title: 私たちのサービス
 text: ここに説明文を入れます。
 width: 40
+:::
+```
+
+回り込み画像の例:
+
+```markdown
+:::float_image_left
+image: https://example.com/sample.jpg
+alt: サンプル画像
+width: 240
 :::
 ```
 
@@ -405,6 +418,7 @@ wp_converter/
 └─ dictionaries/
    ├─ hi_security_dict.py
    ├─ html_dict.py
+   ├─ layout_dict.py
    ├─ json_dict.py
    ├─ markdown_dict.py
    ├─ separated_values_dict.py

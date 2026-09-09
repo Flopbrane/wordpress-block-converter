@@ -71,7 +71,7 @@ MARKDOWN_LIST_RULES: dict[str, dict[str, str | re.Pattern[str] | Callable[..., o
     },
 }
 
-MARKDOWN_CODE_RULE: dict[str, str | Callable[..., object]] = {
+MARKDOWN_CODE_RULE: dict[str, str | re.Pattern[str] | Callable[..., object]] = {
     "name": "code",
     "fence": MARKDOWN_CODE_FENCE,
     "single_line_pattern": MARKDOWN_SINGLE_CODE_PATTERN,

@@ -161,7 +161,10 @@ Current or planned layout names include:
 
 - `:::image_text_left`: image on the left, text on the right
 - `:::image_text_right`: image on the right, text on the left
-- `:::image_row_3`: image row
+- `:::image_row_3_gap`: three images with spacing
+- `:::image_row_3_no_gap`: three images without spacing
+- `:::float_image_left`: left-aligned floating image
+- `:::float_image_right`: right-aligned floating image
 - `:::cta`: CTA heading, text, and button
 - `:::faq`: FAQ
 - `:::cards`: card-style layout
@@ -175,6 +178,16 @@ alt: Service image
 title: Our Service
 text: Add service description text here.
 width: 40
+:::
+```
+
+Example with floating image:
+
+```markdown
+:::float_image_left
+image: https://example.com/sample.jpg
+alt: Sample image
+width: 240
 :::
 ```
 
@@ -403,6 +416,7 @@ wp_converter/
 └─ dictionaries/
    ├─ hi_security_dict.py
    ├─ html_dict.py
+   ├─ layout_dict.py
    ├─ json_dict.py
    ├─ markdown_dict.py
    ├─ separated_values_dict.py

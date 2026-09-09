@@ -10,6 +10,7 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox
 
+from converters.wp_txt_converter import convert_wp_txt_to_gutenberg
 from text_editor.linter import format_lint_issues, has_errors, lint_prewp_txt
 from text_editor.marker_menu import MarkerMenu
 
@@ -42,6 +43,7 @@ class TextEditorFrame(tk.Frame):
         file_menu.add_command(label="保存", command=self.save)
         file_menu.add_command(label="名前を付けて保存", command=self.save_as)
         file_menu.add_command(label=".prewp_txtとして保存", command=self.save_as_prewp_txt)
+        file_menu.add_command(label="WordPress HTMLへ変換して保存", command=self.convert_to_wordpress_html)
         file_menu.add_separator()
         file_menu.add_command(label="閉じる", command=root.destroy)
         menu_bar.add_cascade(label="ファイル", menu=file_menu)
@@ -134,3 +136,51 @@ class TextEditorFrame(tk.Frame):
         self.winfo_toplevel().title(f"text_editor - {save_file_path}")
         messagebox.showinfo("保存完了", f"保存しました。\n\n{save_file_path}", parent=self)
         return True
+
+    def convert_to_wordpress_html(self) -> bool:
+        """エディタ上の文字列を保存せず、そのままWordPress HTMLへ変換します。"""
+        load_file = self.text_area.get("1.0", "end-1c")
+        issues = lint_prewp_txt(load_file)
+        if issues:
+            issue_text = format_lint_issues(issues)
+            if has_errors(issues):
+                should_convert = messagebox.askyesno(
+                    "lintエラーがあります",
+                    f"{issue_text}\n\nこのまま変換しますか？",
+                    parent=self.winfo_toplevel(),
+                )
+                if not should_convert:
+                    return False
+            else:
+                messagebox.showwarning("lint警告", issue_text, parent=self.winfo_toplevel())
+
+        default_save_file_path = self._create_default_wordpress_save_file_path()
+        save_file_path = filedialog.asksaveasfilename(
+            title="WordPress HTMLの保存先を選んでください",
+            defaultextension=".wp_html",
+            initialfile=default_save_file_path.name,
+            initialdir=str(default_save_file_path.parent),
+            filetypes=[
+                ("WordPress HTML", "*.wp_html"),
+                ("HTML", "*.html"),
+                ("すべてのファイル", "*.*"),
+            ],
+        )
+        if not save_file_path:
+            return False
+
+        try:
+            save_file = convert_wp_txt_to_gutenberg(load_file)
+        except (ValueError, TypeError) as error:
+            messagebox.showerror("変換エラー", str(error), parent=self.winfo_toplevel())
+            return False
+
+        Path(save_file_path).write_text(save_file, encoding="utf-8")
+        messagebox.showinfo("変換完了", f"変換しました。\n\n{save_file_path}", parent=self)
+        return True
+
+    def _create_default_wordpress_save_file_path(self) -> Path:
+        if self.current_file_path:
+            save_file_name = f"{self.current_file_path.stem}_wordpress.wp_html"
+            return self.current_file_path.with_name(save_file_name)
+        return Path.cwd() / "article_wordpress.wp_html"

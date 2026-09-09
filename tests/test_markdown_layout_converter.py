@@ -53,6 +53,82 @@ alt3: 画像3
     assert '<img src="https://example.com/three.jpg" alt="画像3"/>' in save_file
 
 
+def test_convert_markdown_image_row_3_gap_layout() -> None:
+    """画像3枚・隙間ありの独自レイアウトをcolumnsへ変換するテストです。"""
+    load_file = """
+:::image_row_3_gap
+image1: https://example.com/one.jpg
+alt1: 画像1
+image2: https://example.com/two.jpg
+alt2: 画像2
+image3: https://example.com/three.jpg
+alt3: 画像3
+:::
+"""
+
+    save_file = convert_markdown_to_gutenberg(load_file)
+
+    assert "<!-- wp:columns" in save_file
+    assert '"blockGap":"24px"' in save_file
+    assert save_file.count("<!-- wp:column -->") == 3
+
+
+def test_convert_markdown_image_row_3_no_gap_layout() -> None:
+    """画像3枚・隙間なしの独自レイアウトをcolumnsへ変換するテストです。"""
+    load_file = """
+:::image_row_3_no_gap
+gap: 40
+image1: https://example.com/one.jpg
+alt1: 画像1
+image2: https://example.com/two.jpg
+alt2: 画像2
+image3: https://example.com/three.jpg
+alt3: 画像3
+:::
+"""
+
+    save_file = convert_markdown_to_gutenberg(load_file)
+
+    assert "<!-- wp:columns" in save_file
+    assert '"blockGap":"0px"' in save_file
+    assert save_file.count("<!-- wp:column -->") == 3
+
+
+def test_convert_markdown_float_image_left_layout() -> None:
+    """画像左回り込みの独自レイアウトをimageブロックへ変換するテストです。"""
+    load_file = """
+:::float_image_left
+image: https://example.com/float.jpg
+alt: 回り込み画像
+width: 240
+:::
+"""
+
+    save_file = convert_markdown_to_gutenberg(load_file)
+
+    assert "<!-- wp:image" in save_file
+    assert '"align":"left"' in save_file
+    assert '"width":240' in save_file
+    assert '<figure class="wp-block-image alignleft">' in save_file
+    assert '<img src="https://example.com/float.jpg" alt="回り込み画像" width="240"/>' in save_file
+
+
+def test_convert_markdown_float_image_right_layout() -> None:
+    """画像右回り込みの独自レイアウトをimageブロックへ変換するテストです。"""
+    load_file = """
+:::float_image_right
+image: https://example.com/float.jpg
+alt: 回り込み画像
+:::
+"""
+
+    save_file = convert_markdown_to_gutenberg(load_file)
+
+    assert '"align":"right"' in save_file
+    assert '"width":300' in save_file
+    assert '<figure class="wp-block-image alignright">' in save_file
+
+
 def test_convert_markdown_cta_layout() -> None:
     """CTA独自レイアウトを見出し、段落、ボタンへ変換するテストです。"""
     load_file = """

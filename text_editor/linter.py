@@ -15,6 +15,14 @@ from dictionaries.wp_txt_dict import (
     WP_TXT_CODE_START,
     WP_TXT_EMPHASIS_CODE_END,
     WP_TXT_EMPHASIS_CODE_START,
+    WP_TXT_HTML_END,
+    WP_TXT_HTML_START,
+    WP_TXT_LIST_END,
+    WP_TXT_LIST_START,
+    WP_TXT_ORDERED_LIST_END,
+    WP_TXT_ORDERED_LIST_START,
+    WP_TXT_PARAGRAPH_END,
+    WP_TXT_PARAGRAPH_START,
     WP_TXT_TABLE_END,
     WP_TXT_TABLE_START,
 )
@@ -51,6 +59,22 @@ def lint_prewp_txt(load_file: str) -> list[LintIssue]:
         "強調コード",
         issues,
     )
+    _check_marker_pair(load_file, WP_TXT_LIST_START, WP_TXT_LIST_END, "リスト", issues)
+    _check_marker_pair(
+        load_file,
+        WP_TXT_ORDERED_LIST_START,
+        WP_TXT_ORDERED_LIST_END,
+        "番号リスト",
+        issues,
+    )
+    _check_marker_pair(
+        load_file,
+        WP_TXT_PARAGRAPH_START,
+        WP_TXT_PARAGRAPH_END,
+        "段落",
+        issues,
+    )
+    _check_marker_pair(load_file, WP_TXT_HTML_START, WP_TXT_HTML_END, "HTML", issues)
     _check_marker_pair(load_file, WP_TXT_TABLE_START, WP_TXT_TABLE_END, "表", issues)
     _check_empty_blocks(load_file, issues)
     _check_link_markers(load_file, issues)
@@ -103,6 +127,10 @@ def _check_empty_blocks(load_file: str, issues: list[LintIssue]) -> None:
     for start_marker, end_marker, marker_name in (
         (WP_TXT_CODE_START, WP_TXT_CODE_END, "コード"),
         (WP_TXT_EMPHASIS_CODE_START, WP_TXT_EMPHASIS_CODE_END, "強調コード"),
+        (WP_TXT_LIST_START, WP_TXT_LIST_END, "リスト"),
+        (WP_TXT_ORDERED_LIST_START, WP_TXT_ORDERED_LIST_END, "番号リスト"),
+        (WP_TXT_PARAGRAPH_START, WP_TXT_PARAGRAPH_END, "段落"),
+        (WP_TXT_HTML_START, WP_TXT_HTML_END, "HTML"),
         (WP_TXT_TABLE_START, WP_TXT_TABLE_END, "表"),
     ):
         pattern = re.compile(

@@ -87,6 +87,37 @@ def create_image_columns_block(images: list[dict[str, str]], gap: str = "24px") 
     )
 
 
+def create_float_image_block(
+    image: str,
+    alt: str = "",
+    align: str = "left",
+    width: int = 300,
+) -> str:
+    """文章回り込み用の画像ブロックを作ります。"""
+    if not image.strip():
+        return ""
+
+    safe_image = escape(image.strip(), quote=True)
+    safe_alt = escape(alt.strip(), quote=True)
+    safe_align = "right" if align == "right" else "left"
+    safe_width = min(max(width, 80), 1200)
+    attributes = {
+        "url": image.strip(),
+        "alt": alt.strip(),
+        "align": safe_align,
+        "width": safe_width,
+    }
+    attribute_text = json.dumps(attributes, ensure_ascii=False, separators=(",", ":"))
+
+    return (
+        f"<!-- wp:image {attribute_text} -->\n"
+        f'<figure class="wp-block-image align{safe_align}">'
+        f'<img src="{safe_image}" alt="{safe_alt}" width="{safe_width}"/>'
+        "</figure>\n"
+        "<!-- /wp:image -->"
+    )
+
+
 def create_cta_block(
     title: str,
     text: str,

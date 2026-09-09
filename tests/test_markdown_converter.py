@@ -134,4 +134,4 @@ def test_convert_markdown_does_not_parse_markdown_inside_fenced_code() -> None:
     assert "<!-- wp:heading" not in save_file
     assert "<!-- wp:table -->" not in save_file
     assert "## 見出しではありません" in save_file
-    assert "print(&quot;&lt;x&gt;&amp;&quot;)" in save_file
+    assert 'print("&lt;x&gt;&amp;")' in save_file

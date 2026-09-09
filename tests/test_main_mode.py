@@ -14,7 +14,7 @@ from converters.document_converter import (
     convert_pdf_to_gutenberg,
     convert_rtf_to_gutenberg,
 )
-from main import convert_file
+from main import convert_file, convert_text_content
 
 
 def test_convert_file_applies_hi_security_mode(tmp_path: Path) -> None:
@@ -201,6 +201,37 @@ def test_convert_file_supports_prewp_txt(tmp_path: Path) -> None:
     save_file = save_file_path.read_text(encoding="utf-8")
     assert '<h2 class="wp-block-heading">サービス紹介</h2>' in save_file
     assert "<p>本文です。</p>" in save_file
+
+
+def test_convert_file_prewp_txt_prefers_prewp_parser_for_explicit_paragraph(
+    tmp_path: Path,
+) -> None:
+    """prewp_txtではWPコメント風の明示段落もPRE-WPとして変換するテストです。"""
+    load_file_path = tmp_path / "sample.prewp_txt"
+    save_file_path = tmp_path / "sample_wordpress.html"
+    load_file_path.write_text(
+        "<!-- wp:paragraph -->\n"
+        "1行目です。\n\n"
+        "2行目です。\n"
+        "<!-- /wp:paragraph -->",
+        encoding="utf-8",
+    )
+
+    convert_file(load_file_path, save_file_path)
+
+    save_file = save_file_path.read_text(encoding="utf-8")
+    assert "<p>1行目です。<br><br>2行目です。</p>" in save_file
+
+
+def test_convert_text_content_supports_prewp_without_file_save() -> None:
+    """保存前のPRE-WP文字列をファイルI/Oなしで変換するテストです。"""
+    load_file = "[コード]\nprint(\"hello\")\n[/コード]"
+
+    save_file = convert_text_content(load_file, "article.prewp_txt")
+
+    assert "<!-- wp:code -->" in save_file
+    assert 'print("hello")' in save_file
+    assert "<!-- /wp:code -->" in save_file
 
 
 def test_convert_file_keeps_txt_conversion_as_plain_paragraphs(tmp_path: Path) -> None:

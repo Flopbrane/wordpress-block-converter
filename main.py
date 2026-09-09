@@ -20,6 +20,7 @@ from gui_maker import run_gui
 from repair_mode import repair_wordpress_html
 from rewrite_style import apply_rewrite_style
 from storage import read_load_file, write_save_file
+from text_editor.main import run_text_editor
 
 
 def convert_file(
@@ -51,6 +52,23 @@ def convert_file(
     write_save_file(save_file_path, save_file)
 
 
+def convert_text_content(
+    load_file: str,
+    load_file_path: str | Path = "article.prewp_txt",
+    mode: str = NORMAL_MODE,
+) -> str:
+    """保存前の文字列を、ファイルI/OなしでWordPress Gutenberg向けHTMLへ変換します。"""
+    if mode not in CONVERSION_MODES:
+        raise ValueError(f"対応していない変換モードです: {mode}")
+    normalized_mode = normalize_conversion_mode(mode)
+
+    converter = select_converter(load_file_path, load_file)
+    save_file: str = converter(load_file)
+    if normalized_mode in SAFE_CONVERSION_MODES:
+        save_file = apply_hi_security_filter(save_file)
+    return apply_rewrite_style(save_file, normalized_mode)
+
+
 def main() -> None:
     """コマンドライン引数またはGUIからWordPress Gutenberg向けHTMLへ変換します。"""
     parser = argparse.ArgumentParser(
@@ -74,8 +92,6 @@ def main() -> None:
     args: argparse.Namespace = parser.parse_args()
 
     if args.edit_text:
-        from text_editor.main import run_text_editor
-
         run_text_editor(args.load_file_path)
         return
 

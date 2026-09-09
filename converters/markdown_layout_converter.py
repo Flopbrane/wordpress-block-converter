@@ -10,10 +10,16 @@ from blocks.heading import create_heading_block
 from blocks.layout import (
     create_card_columns_block,
     create_cta_block,
+    create_float_image_block,
     create_image_columns_block,
     create_media_text_block,
 )
 from blocks.paragraph import create_paragraph_block
+from dictionaries.layout_dict import (
+    FLOAT_IMAGE_LAYOUTS,
+    IMAGE_ROW_LAYOUTS,
+    IMAGE_TEXT_LAYOUTS,
+)
 
 
 def convert_markdown_layout_to_gutenberg(layout_name: str, layout_lines: list[str]) -> str:
@@ -21,7 +27,7 @@ def convert_markdown_layout_to_gutenberg(layout_name: str, layout_lines: list[st
     layout_data = _parse_layout_lines(layout_lines)
     clean_layout_name = layout_name.strip().lower()
 
-    if clean_layout_name in {"image_text_left", "image_text_right"}:
+    if clean_layout_name in IMAGE_TEXT_LAYOUTS:
         media_position = "right" if clean_layout_name.endswith("_right") else "left"
         return create_media_text_block(
             image=layout_data.get("image", ""),
@@ -33,10 +39,19 @@ def convert_markdown_layout_to_gutenberg(layout_name: str, layout_lines: list[st
             convert_inline_code=True,
         )
 
-    if clean_layout_name in {"image_row", "image_row_2", "image_row_3"}:
+    if clean_layout_name in IMAGE_ROW_LAYOUTS:
         return create_image_columns_block(
             _collect_numbered_items(layout_data, "image", "alt"),
-            gap=layout_data.get("gap", "24px"),
+            gap=_select_image_row_gap(clean_layout_name, layout_data),
+        )
+
+    if clean_layout_name in FLOAT_IMAGE_LAYOUTS:
+        align = "right" if clean_layout_name.endswith("_right") else "left"
+        return create_float_image_block(
+            image=layout_data.get("image", ""),
+            alt=layout_data.get("alt", ""),
+            align=align,
+            width=_to_int(layout_data.get("width", "300"), 300),
         )
 
     if clean_layout_name == "cta":
@@ -100,6 +115,14 @@ def _collect_numbered_items(
         })
 
     return items
+
+
+def _select_image_row_gap(layout_name: str, layout_data: dict[str, str]) -> str:
+    if layout_name == "image_row_3_no_gap":
+        return "0"
+    if layout_name == "image_row_3_gap":
+        return layout_data.get("gap", "24px")
+    return layout_data.get("gap", "24px")
 
 
 def _create_faq_blocks(layout_data: dict[str, str]) -> str:

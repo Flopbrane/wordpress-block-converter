@@ -31,12 +31,18 @@ from dictionaries.wp_txt_dict import (
     WP_TXT_CODE_START,
     WP_TXT_EXTENSIONS,
     WP_TXT_HEADING_PATTERN,
+    WP_TXT_LIST_START,
+    WP_TXT_ORDERED_LIST_START,
     WP_TXT_SUBHEADING_PATTERN,
     WP_TXT_TABLE_START,
 )
 
+SUPPORTED_FILE_PATTERN = (
+    "*.txt *.prewp_txt *.wp_txt *.wptxt *.md *.markdown *.html *.htm "
+    "*.wp_html *.csv *.ssv *.tsv *.psv *.pipesv *.json"
+)
 SUPPORTED_FILE_TYPES: list[tuple[str, str]] = [
-    ("対応ファイル", "*.txt *.prewp_txt *.wp_txt *.wptxt *.md *.markdown *.html *.htm *.wp_html *.csv *.ssv *.tsv *.psv *.pipesv *.json"),
+    ("対応ファイル", SUPPORTED_FILE_PATTERN),
     ("テキスト", "*.txt"),
     ("マーカー付き平文", "*.prewp_txt *.wp_txt *.wptxt"),
     ("Markdown", "*.md *.markdown"),
@@ -55,15 +61,22 @@ CSV_MIN_COLUMNS = 2
 CSV_MIN_ROWS = 2
 
 
-def select_converter(load_file_path: str | Path, load_file: str | None = None) -> Callable[[str], str]:
+# pylint: disable-next=too-many-return-statements
+def select_converter(
+    load_file_path: str | Path,
+    load_file: str | None = None,
+) -> Callable[[str], str]:
     """load_file_pathと内容から、適切なconverterを返します。"""
     file_extension: str = Path(load_file_path).suffix.lower()
-    if load_file is not None and _looks_like_existing_wordpress_html(load_file, file_extension):
-        return keep_existing_wordpress_html
     if file_extension in WP_TXT_EXTENSIONS:
         return convert_wp_txt_to_gutenberg
+    if load_file is not None and _looks_like_existing_wordpress_html(load_file, file_extension):
+        return keep_existing_wordpress_html
     if load_file is not None:
-        content_converter: Callable[[str], str] | None = _select_converter_by_content(load_file, file_extension)
+        content_converter: Callable[[str], str] | None = _select_converter_by_content(
+            load_file,
+            file_extension,
+        )
         if content_converter is not None:
             return content_converter
 
@@ -100,6 +113,7 @@ def keep_existing_wordpress_html(load_file: str) -> str:
     return load_file
 
 
+# pylint: disable-next=too-many-return-statements
 def _select_converter_by_content(
     load_file: str,
     file_extension: str,
@@ -128,7 +142,9 @@ def _looks_like_existing_wordpress_html(load_file: str, file_extension: str) -> 
     if first_line and WORDPRESS_BLOCK_START_PATTERN.search(first_line):
         return True
 
-    return file_extension == ".wp_html" and bool(WORDPRESS_BLOCK_COMMENT_PATTERN.search(load_file))
+    return file_extension == ".wp_html" and bool(
+        WORDPRESS_BLOCK_COMMENT_PATTERN.search(load_file)
+    )
 
 
 def _looks_like_markdown(load_file: str) -> bool:
@@ -163,9 +179,17 @@ def _looks_like_json(load_file: str) -> bool:
 def _looks_like_wp_txt(load_file: str) -> bool:
     for line in _non_empty_lines(load_file, limit=10):
         stripped_line = line.strip()
-        if stripped_line in {WP_TXT_CODE_START, WP_TXT_TABLE_START}:
+        if stripped_line in {
+            WP_TXT_CODE_START,
+            WP_TXT_LIST_START,
+            WP_TXT_ORDERED_LIST_START,
+            WP_TXT_TABLE_START,
+        }:
             return True
-        if WP_TXT_HEADING_PATTERN.match(stripped_line) or WP_TXT_SUBHEADING_PATTERN.match(stripped_line):
+        if (
+            WP_TXT_HEADING_PATTERN.match(stripped_line)
+            or WP_TXT_SUBHEADING_PATTERN.match(stripped_line)
+        ):
             return True
 
     return False
