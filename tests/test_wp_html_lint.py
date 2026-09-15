@@ -6,7 +6,7 @@
 #########################
 from __future__ import annotations
 
-from lint import lint_wp_html
+from lint import lint_css, lint_file, lint_wp_html
 
 
 def test_lint_reports_unclosed_paragraph_block() -> None:
@@ -56,6 +56,71 @@ def test_lint_reports_nested_html_tag_mismatch() -> None:
 
     assert any("<strong> が閉じられていません" in issue.message for issue in issues)
     assert any("</strong> を </p> より前に追加してください" in issue.hint for issue in issues)
+
+
+def test_lint_reports_unclosed_html_tag_inside_core_block() -> None:
+    """コアブロック内のHTMLタグ閉じ忘れを検出するテストです。"""
+    load_file = (
+        "<!-- wp:paragraph -->\n"
+        "<p><strong>重要な本文</p>\n"
+        "<!-- /wp:paragraph -->"
+    )
+
+    issues = lint_wp_html(load_file)
+
+    assert any("<strong> が閉じられていません" in issue.message for issue in issues)
+    assert any("</strong> を </p> より前に追加してください" in issue.hint for issue in issues)
+
+
+def test_lint_reports_html_tag_typo_in_plain_html() -> None:
+    """HTML単体でもタグ名typoを検出するテストです。"""
+    load_file = "<p><strnog>重要</strnog></p>"
+
+    issues = lint_wp_html(load_file, mode="normal")
+
+    assert any("<strnog> は既知のHTMLタグではありません" in issue.message for issue in issues)
+    assert any("<strong>" in issue.hint for issue in issues)
+
+
+def test_lint_reports_html_tag_typo_inside_core_block() -> None:
+    """WP_HTML内でもタグ名typoを検出するテストです。"""
+    load_file = (
+        "<!-- wp:paragraph -->\n"
+        "<p><spna>本文</spna></p>\n"
+        "<!-- /wp:paragraph -->"
+    )
+
+    issues = lint_wp_html(load_file, mode="normal")
+
+    assert any("<spna> は既知のHTMLタグではありません" in issue.message for issue in issues)
+    assert any("<span>" in issue.hint for issue in issues)
+
+
+def test_lint_reports_core_block_name_typo() -> None:
+    """WPコアブロック名typoを検出するテストです。"""
+    load_file = (
+        "<!-- wp:paragaph -->\n"
+        "<p>本文</p>\n"
+        "<!-- /wp:paragaph -->"
+    )
+
+    issues = lint_wp_html(load_file)
+
+    assert any("wp:paragaph ブロックコメントは既知のコアブロック名ではありません" in issue.message for issue in issues)
+    assert any("wp:paragraph" in issue.hint for issue in issues)
+
+
+def test_lint_accepts_core_prefixed_block_comments() -> None:
+    """core/付きWPコアブロックコメントも同じコアブロックとして検査するテストです。"""
+    load_file = (
+        "<!-- wp:core/paragraph -->\n"
+        "<p>本文</p>\n"
+        "<!-- /wp:core/paragraph -->"
+    )
+
+    issues = lint_wp_html(load_file, mode="normal")
+
+    assert issues == []
 
 
 def test_lint_reports_dangerous_tags_attributes_and_urls() -> None:
@@ -185,6 +250,113 @@ def test_lint_reports_block_comment_inside_paragraph_block() -> None:
     issues = lint_wp_html(load_file)
 
     assert any("paragraph ブロック内に wp:code ブロックコメント" in issue.message for issue in issues)
+
+
+def test_lint_reports_non_normal_unstable_core_blocks() -> None:
+    """非normalモードで表示が不安定なコアブロックを警告するテストです。"""
+    load_file = (
+        "<!-- wp:embed -->\n"
+        '<figure class="wp-block-embed"><div>https://www.youtube.com/watch?v=test</div></figure>\n'
+        "<!-- /wp:embed -->\n"
+        "<!-- wp:shortcode -->\n"
+        "[contact-form-7 id=\"1\"]\n"
+        "<!-- /wp:shortcode -->\n"
+        "<!-- wp:columns -->\n"
+        "<!-- wp:column -->\n"
+        "<p>本文</p>\n"
+        "<!-- /wp:column -->\n"
+        "<!-- /wp:columns -->\n"
+    )
+
+    issues = lint_wp_html(load_file, mode="middle")
+
+    assert any("core/embed" in issue.message and "表示されない" in issue.message for issue in issues)
+    assert any("core/shortcode" in issue.message and "実行されない" in issue.message for issue in issues)
+    assert any("core/columns" in issue.message and "列崩れ" in issue.message for issue in issues)
+    assert any("core/column" in issue.message and "不安定" in issue.message for issue in issues)
+
+
+def test_lint_skips_non_normal_display_warnings_in_normal_mode() -> None:
+    """normalモードでは非normal向けの表示警告を出さないテストです。"""
+    load_file = (
+        "<!-- wp:embed -->\n"
+        '<figure class="wp-block-embed"><div>https://www.youtube.com/watch?v=test</div></figure>\n'
+        "<!-- /wp:embed -->\n"
+        '<p class="hidden-post" style="display:none">本文</p>\n'
+        "<script>alert(1)</script>\n"
+    )
+
+    issues = lint_wp_html(load_file, mode="normal")
+
+    assert not any("core/embed" in issue.message for issue in issues)
+    assert not any("表示が不安定" in issue.message for issue in issues)
+    assert not any("危険扱い" in issue.message for issue in issues)
+
+
+def test_lint_reports_display_unstable_classes_and_styles() -> None:
+    """非normalモードでCSS由来の非表示・不安定表示を警告するテストです。"""
+    load_file = (
+        '<p class="hidden-post samearea-otheroffice">非表示候補</p>\n'
+        '<p class="swiper modal">JS依存候補</p>\n'
+        '<p style="pointer-events:none">クリック不可候補</p>\n'
+    )
+
+    issues = lint_wp_html(load_file, mode="high-security")
+
+    assert any("hidden-post" in issue.message for issue in issues)
+    assert any("samearea-otheroffice" in issue.message for issue in issues)
+    assert any("swiper" in issue.message for issue in issues)
+    assert any("modal" in issue.message for issue in issues)
+    assert any("style に表示・操作を制限する指定" in issue.message for issue in issues)
+    assert any("ホバー表示のツールチップ" in issue.hint for issue in issues)
+
+
+def test_lint_css_reports_display_restrictions() -> None:
+    """CSSファイルモードで表示・操作制限を検出するテストです。"""
+    load_file = (
+        ".hidden-post { display: none; }\n"
+        ".cta { pointer-events: none; opacity: 0; }\n"
+        ".table-wrap { overflow-x: hidden; }\n"
+        "@import url('https://example.com/base.css');\n"
+    )
+
+    issues = lint_css(load_file)
+
+    assert any("display:none" in issue.message for issue in issues)
+    assert any("pointer-events:none" in issue.message for issue in issues)
+    assert any("opacity:0" in issue.message for issue in issues)
+    assert any("overflow:hidden" in issue.message for issue in issues)
+    assert any("@import" in issue.message for issue in issues)
+
+
+def test_lint_css_ignores_commented_restrictions() -> None:
+    """コメント内のCSS制限指定は警告しないテストです。"""
+    load_file = (
+        "/* .old { display: none; }\n"
+        ".old-link { pointer-events: none; } */\n"
+        ".active { display: block; }\n"
+    )
+
+    issues = lint_css(load_file)
+
+    assert issues == []
+
+
+def test_lint_file_auto_detects_css(tmp_path) -> None:
+    """拡張子.cssのファイルはCSSファイルモードとして検査するテストです。"""
+    css_path = tmp_path / "style.css"
+    css_path.write_text(".modal { visibility: hidden; }", encoding="utf-8")
+
+    issues = lint_file(css_path)
+
+    assert any("visibility:hidden" in issue.message for issue in issues)
+
+
+def test_lint_css_reports_unmatched_braces() -> None:
+    """CSSの波括弧不一致を検出するテストです。"""
+    issues = lint_css(".card { display: block;")
+
+    assert any("波括弧" in issue.message for issue in issues)
 
 
 def test_lint_passes_inline_code_inside_paragraph_block() -> None:

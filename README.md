@@ -305,9 +305,9 @@ In `middle`, `high-security`, `office`, and `hi-security` modes, `\\` with white
 
 For office WordPress output, the converter prefers WordPress core block comments such as `<!-- wp:paragraph -->`, `<!-- wp:heading -->`, `<!-- wp:list -->`, and `<!-- wp:table -->` instead of relying on free-form HTML alone.
 
-### WP HTML lint
+### WP HTML / CSS lint
 
-You can check converted WordPress block HTML files.
+You can check converted WordPress block HTML files and downloaded CSS files.
 
 Recommended: move to the project folder in PowerShell before running the linter.
 
@@ -322,6 +322,29 @@ To check a `.wp_html` file:
 python .\lint.py .\your_article.wp_html
 ```
 
+CSS files are detected automatically by the `.css` extension:
+
+```powershell
+python .\lint.py .\style.css
+```
+
+If you need to force the mode, use `--input-type`.
+
+```powershell
+python .\lint.py .\style.txt --input-type css
+python .\lint.py .\your_article.html --input-type wp-html
+```
+
+Use `--mode` when checking output for office WordPress or high-security environments. The default lint mode is `high-security`.
+
+```powershell
+python .\lint.py .\your_article.wp_html --mode middle
+python .\lint.py .\your_article.wp_html --mode high-security
+python .\lint.py .\your_article.wp_html --mode normal
+```
+
+`normal` runs the standard structural checks. `middle`, `office`, `high-security`, and `hi-security` also warn about blocks and classes that may be hidden, disabled, or unstable in restricted WordPress environments.
+
 If you prefer `python -m`, run it from the parent folder.
 
 ```powershell
@@ -331,20 +354,43 @@ python -m wp_converter.lint .\wp_converter\your_article.wp_html
 
 If your current folder is `D:\PC\Python\wp_converter\dictionaries` or another subfolder, move back to `D:\PC\Python\wp_converter` first.
 
-It checks:
+For WordPress HTML, it checks:
 
 - Matching `<!-- wp:paragraph -->` and `<!-- /wp:paragraph -->`
+- Core block name typos such as `<!-- wp:paragaph -->`
 - `<p>` and `</p>` inside paragraph blocks
 - Heading block `level` matching the HTML heading tag from `<h2>` to `<h5>`
 - `<figure class="wp-block-table">` and `<table>` inside table blocks
+- HTML tag typos such as `<strnog>` and `<spna>` in both plain HTML and WordPress block HTML
 - `href` on `<a>` tags
 - `rel="noopener"` when `target="_blank"` is used
 - `src` and `alt` on `<img>` tags
 - Empty paragraph blocks. `<p></p>` and similar blocks are reported as `paragraph ブロックが空です。`.
+- Blank lines inside `<p>` in paragraph blocks. These can make Gutenberg move the content to a Custom HTML block.
 - Nested HTML tag mistakes such as `<p><strong>text</p>`
+- Unclosed HTML tags inside core blocks, such as `<strong>` left open inside `wp:paragraph`
 - Dangerous HTML such as `script`, `iframe`, `style`, `onclick`, and `javascript:`
+- In non-normal modes, unstable core blocks such as `core/embed`, `core/html`, `core/shortcode`, `core/video`, `core/audio`, `core/file`, `core/gallery`, `core/media-text`, `core/columns`, `core/buttons`, and `core/spacer`
+- In non-normal modes, classes found in the CSS audit as hidden or unstable, such as `hidden-post`, `samearea-otheroffice`, `blog-officelist`, `modal`, `swiper`, `visually-hidden`, `screen-reader`, and `sr-only`
+- In non-normal modes, inline CSS that restricts display or interaction, such as `display:none`, `visibility:hidden`, `opacity:0`, `pointer-events:none`, `user-select:none`, and `overflow:hidden`
+
+For CSS files, it checks:
+
+- Display-disabling rules such as `display:none`, `visibility:hidden`, `content-visibility:hidden`, `opacity:0`, `width:0`, and `height:0`
+- Interaction restrictions such as `pointer-events:none`, `user-select:none`, disabled cursors, and hidden scrollbars
+- Layout rules that often break in WordPress or mobile views, such as `overflow:hidden`, `clip`, `clip-path`, `position:fixed`, and very large `z-index`
+- External dependencies such as `@import` and `url(https://...)`
+- Unmatched CSS braces, because a missing `}` can disable later rules
 
 When issues are found, it prints the line number, problem, and fix hint.
+
+In `text_editor`, use `Tools > lintチェック` to highlight issue lines. Hover over a highlighted line to see the warning and fix hint. Files ending in `.css` are checked with the CSS linter. Files ending in `.wp_html`, `.html`, or `.htm`, and text containing `<!-- wp:`, are checked with the WordPress HTML linter.
+
+To run the real-world lint tester built from an actual article sample:
+
+```powershell
+python -m pytest tests/test_wp_html_lint_real_world_tester.py
+```
 
 ## Example
 
@@ -432,7 +478,7 @@ The project keeps each responsibility small:
 - `storage.py` reads source files and writes converted files
 - `file_checker.py` checks supported extensions and selects converters
 - `gui_maker.py` handles GUI windows and file selection
-- `lint.py` checks WordPress block HTML for common issues
+- `lint.py` checks WordPress block HTML and CSS for common issues
 - `converters/` converts each input format
 - `blocks/` creates WordPress block HTML
 - `dictionaries/` stores conversion rules and patterns

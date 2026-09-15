@@ -54,6 +54,76 @@ WORDPRESS_CORE_BLOCKS: dict[str, str] = {
     "embed": "core/embed",
 }
 
+NON_NORMAL_UNSTABLE_CORE_BLOCKS: dict[str, dict[str, str]] = {
+    "html": {
+        "message": "core/html はmiddle / high-security modeでは無効化・除去・表示崩れの可能性があります。",
+        "hint": "通常の段落、見出し、表、画像などのGutenberg標準ブロックへ置き換えてください。",
+    },
+    "embed": {
+        "message": "core/embed は事業所WPや高セキュリティ環境で表示されないことがあります。",
+        "hint": "YouTube、SNS、地図などの外部埋め込みは、通常リンクまたは説明文付きリンクへ置き換えてください。",
+    },
+    "shortcode": {
+        "message": "core/shortcode はプラグイン依存のため、事業所WPでは実行されないことがあります。",
+        "hint": "ショートコード前提の表示ではなく、本文・リンク・画像などの標準ブロックで代替してください。",
+    },
+    "video": {
+        "message": "core/video は動画ファイルやプレイヤーが制限され、表示が不安定になることがあります。",
+        "hint": "動画はリンク化し、必要ならサムネイル画像と説明文を併記してください。",
+    },
+    "audio": {
+        "message": "core/audio は音声プレイヤーが制限され、表示されないことがあります。",
+        "hint": "音声ファイルへの通常リンクやダウンロード案内へ置き換えてください。",
+    },
+    "file": {
+        "message": "core/file はダウンロードボタンや埋め込み表示が制限されることがあります。",
+        "hint": "ファイルURLへの通常リンクと、ファイル種別・容量などの説明を併記してください。",
+    },
+    "gallery": {
+        "message": "core/gallery はCSSやライトボックス依存で、画像の並びが崩れることがあります。",
+        "hint": "重要な画像は単独の core/image と説明文に分けると安定します。",
+    },
+    "media-text": {
+        "message": "core/media-text はレスポンシブ切替で表示順や幅が崩れることがあります。",
+        "hint": "画像ブロックと段落ブロックを分け、縦並びでも読める構成にしてください。",
+    },
+    "columns": {
+        "message": "core/columns はスマホ・事業所WPのCSSで列崩れや順序変更が起きることがあります。",
+        "hint": "重要な内容は単一カラムの見出し・段落・表へ分解してください。",
+    },
+    "column": {
+        "message": "core/column は親のcolumnsと同様に、幅や順序が不安定になることがあります。",
+        "hint": "非normalモードでは単一カラム構成を優先してください。",
+    },
+    "buttons": {
+        "message": "core/buttons はボタン装飾やクリック領域が制限されることがあります。",
+        "hint": "重要な導線は通常のテキストリンクも併記してください。",
+    },
+    "button": {
+        "message": "core/button はボタン装飾やクリック領域が制限されることがあります。",
+        "hint": "重要な導線は通常のテキストリンクも併記してください。",
+    },
+    "spacer": {
+        "message": "core/spacer はCSS制限で高さが詰まる、または余白が過剰になることがあります。",
+        "hint": "見た目調整だけの余白は避け、見出しや区切り線で構造を作ってください。",
+    },
+}
+
+DISPLAY_UNSTABLE_CLASS_KEYWORDS: dict[str, str] = {
+    "hidden": "hidden系クラスはCSSで display:none になることがあります。",
+    "hide": "hide系クラスはCSSで非表示化されることがあります。",
+    "visually-hidden": "visually-hiddenは視覚的に隠すためのクラスです。",
+    "screen-reader": "screen-reader系クラスは画面上では見えない可能性があります。",
+    "sr-only": "sr-onlyは画面上では見えない可能性があります。",
+    "modal": "modal系UIはオーバーレイやJavaScript依存で表示が不安定になることがあります。",
+    "swiper": "swiper系UIはスライダーCSS/JS依存で、操作UIが非表示になることがあります。",
+    "sp": "sp/pc切替クラスは端末幅によって表示されないことがあります。",
+    "pc": "sp/pc切替クラスは端末幅によって表示されないことがあります。",
+    "blog-officelist": "blog-officelistは解析対象CSSで非表示候補として検出されています。",
+    "samearea-otheroffice": "samearea-otherofficeは解析対象CSSで非表示候補として検出されています。",
+    "hidden-post": "hidden-post系は解析対象CSSで非表示候補として検出されています。",
+}
+
 PRIORITY_BLOCK_COMMENT_NAMES: dict[str, str] = {
     "paragraph": "paragraph",
     "heading": "heading",

@@ -307,9 +307,9 @@ python .\main.py .\sample.md .\sample_wordpress.html --mode middle
 
 事業所WP向けの出力では、HTMLだけで表や箇条書きを組み立てるよりも、`<!-- wp:paragraph -->`、`<!-- wp:heading -->`、`<!-- wp:list -->`、`<!-- wp:table -->` のようなWordPressコアブロックコメントで囲む方針を優先します。
 
-### WP HTML lint
+### WP HTML / CSS lint
 
-変換済みのWordPressブロックHTMLを確認できます。
+変換済みのWordPressブロックHTMLと、ダウンロード済みCSSファイルを確認できます。
 
 PowerShellでプロジェクトフォルダへ移動してから実行するのがおすすめです。
 
@@ -324,6 +324,29 @@ python .\lint.py .\sample_wordpress.html
 python .\lint.py .\your_article.wp_html
 ```
 
+`.css` ファイルは拡張子で自動的にCSSファイルモードとして確認します。
+
+```powershell
+python .\lint.py .\style.css
+```
+
+モードを明示したい場合は `--input-type` を使えます。
+
+```powershell
+python .\lint.py .\style.txt --input-type css
+python .\lint.py .\your_article.html --input-type wp-html
+```
+
+事業所WPや高セキュリティ環境を想定して確認する場合は、`--mode` を指定できます。省略時は `high-security` として確認します。
+
+```powershell
+python .\lint.py .\your_article.wp_html --mode middle
+python .\lint.py .\your_article.wp_html --mode high-security
+python .\lint.py .\your_article.wp_html --mode normal
+```
+
+`normal` では通常表示向けの構文チェックを行い、`middle` / `office` / `high-security` / `hi-security` では、事業所WPで表示されない・崩れやすいブロックやclassも警告します。
+
 `python -m` で実行する場合は、1つ上のフォルダから実行します。
 
 ```powershell
@@ -333,20 +356,43 @@ python -m wp_converter.lint .\wp_converter\your_article.wp_html
 
 `D:\PC\Python\wp_converter\dictionaries` など別フォルダにいる場合は、先に `D:\PC\Python\wp_converter` へ戻ってから実行してください。
 
-主に次を確認します。
+WordPress HTMLでは主に次を確認します。
 
 - `<!-- wp:paragraph -->` と `<!-- /wp:paragraph -->` の対応
+- `<!-- wp:paragaph -->` のようなコアブロック名typo
 - paragraph ブロック内の `<p>` と `</p>`
 - heading ブロックコメントの `level` と `<h2>` から `<h5>` の一致
 - table ブロック内の `<figure class="wp-block-table">` と `<table>`
+- HTML単体とWordPressブロックHTML内の `<strnog>`、`<spna>` のようなHTMLタグtypo
 - `<a>` タグの `href`
 - `target="_blank"` 時の `rel="noopener"`
 - `<img>` タグの `src` と `alt`
 - 空の paragraph ブロック。`<p></p>` などは `paragraph ブロックが空です。` と表示します。
+- paragraph ブロック内の `<p>` 内部にある空行。Gutenbergが通常の段落ブロックとして扱えず、カスタムHTMLへ退避する原因になります。
 - `<p><strong>本文</p>` のようなHTMLタグの入れ子ミス
+- `wp:paragraph` 内で `<strong>` が開いたままになるような、コアブロック内HTMLタグの閉じ忘れ
 - `script`、`iframe`、`style`、`onclick`、`javascript:` などの危険なHTML
+- 非normalモードでは、`core/embed`、`core/html`、`core/shortcode`、`core/video`、`core/audio`、`core/file`、`core/gallery`、`core/media-text`、`core/columns`、`core/buttons`、`core/spacer` など、表示が無効化・不安定化しやすいコアブロック
+- 非normalモードでは、`hidden-post`、`samearea-otheroffice`、`blog-officelist`、`modal`、`swiper`、`visually-hidden`、`screen-reader`、`sr-only` など、解析済みCSSで非表示・表示不安定になりやすいclass
+- 非normalモードでは、`display:none`、`visibility:hidden`、`opacity:0`、`pointer-events:none`、`user-select:none`、`overflow:hidden` など、表示や操作を制限するインラインstyle
+
+CSSファイルでは主に次を確認します。
+
+- `display:none`、`visibility:hidden`、`content-visibility:hidden`、`opacity:0`、`width:0`、`height:0` など、表示を消す指定
+- `pointer-events:none`、`user-select:none`、操作不可カーソル、スクロールバー非表示など、操作を制限する指定
+- `overflow:hidden`、`clip`、`clip-path`、`position:fixed`、大きすぎる `z-index` など、WordPressやスマホ表示で崩れやすい指定
+- `@import`、`url(https://...)` など、外部CSS・画像・フォントへの依存
+- CSSの波括弧不一致。`}` の閉じ忘れがあると、後続のCSSがまとめて効かなくなることがあります。
 
 問題がある場合は、行番号、問題内容、修正ヒントを表示します。
+
+`text_editor` で `ツール > lintチェック` を実行すると、問題行がハイライトされます。ハイライト行にマウスを乗せると、警告内容と修正ヒントがホバー表示されます。`.css` を開いている場合はCSS lint、`.wp_html` / `.html` を開いている場合や、本文に `<!-- wp:` が含まれる場合はWordPress HTML lintとして確認します。
+
+実文章ベースのlint実働試験は、次のコマンドで実行できます。
+
+```powershell
+python -m pytest tests/test_wp_html_lint_real_world_tester.py
+```
 
 ## 変換例
 
@@ -434,7 +480,7 @@ wp_converter/
 | `storage.py` | load_fileの読み込み、save_fileの保存 |
 | `file_checker.py` | 対応拡張子の確認、converter選択 |
 | `gui_maker.py` | GUI表示、ファイル選択画面 |
-| `lint.py` | WordPressブロックHTMLの簡易チェック |
+| `lint.py` | WordPressブロックHTMLとCSSの簡易チェック |
 | `converters/` | 入力形式ごとの変換処理 |
 | `blocks/` | WordPressブロックHTMLを作る部品 |
 | `dictionaries/` | 変換ルール、正規表現、対応拡張子 |
