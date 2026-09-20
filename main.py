@@ -5,6 +5,10 @@
 #
 #########################
 
+from portable_runtime import configure_portable_runtime
+
+configure_portable_runtime()
+
 import argparse
 from pathlib import Path
 from typing import Callable

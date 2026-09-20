@@ -17,12 +17,14 @@ from blocks.code import create_code_block, create_emphasis_code_block
 from blocks.image import create_image_block
 from blocks.inline import format_inline_text
 from blocks.list_block import create_list_block
+from blocks.media import create_audio_block, create_file_block, create_video_block
 from blocks.paragraph import create_paragraph_block
 from blocks.quote import create_quote_block
 from blocks.separator import create_separator_block
 from blocks.spacer import create_spacer_block
 from blocks.table import create_table_block_from_rows
 from dictionaries.wp_txt_dict import (
+    WP_TXT_AUDIO_PATTERN,
     WP_TXT_BOX_END,
     WP_TXT_BOX_START,
     WP_TXT_CODE_END,
@@ -31,6 +33,7 @@ from dictionaries.wp_txt_dict import (
     WP_TXT_CODE_START,
     WP_TXT_EMPHASIS_CODE_END,
     WP_TXT_EMPHASIS_CODE_START,
+    WP_TXT_FILE_PATTERN,
     WP_TXT_HEADING_PATTERN,
     WP_TXT_HTML_END,
     WP_TXT_HTML_EXEC_END,
@@ -60,6 +63,7 @@ from dictionaries.wp_txt_dict import (
     WP_TXT_TABLE_END,
     WP_TXT_TABLE_START,
     WP_TXT_UNORDERED_LIST_PATTERN,
+    WP_TXT_VIDEO_PATTERN,
 )
 
 PrewpBlockType = Literal[
@@ -306,13 +310,33 @@ def _append_standalone_block(
         blocks.append(create_spacer_block(int(spacer_match.group(1))))
         return True
 
-    image_match = WP_TXT_IMAGE_PATTERN.match(stripped_line)
-    if image_match:
+    media_block = _create_media_block(stripped_line)
+    if media_block is not None:
         _flush_text_blocks(blocks, paragraph_lines, list_items, list_ordered, quote_lines)
-        blocks.append(create_image_block(image_match.group(1), image_match.group(2)))
+        blocks.append(media_block)
         return True
 
     return False
+
+
+def _create_media_block(stripped_line: str) -> str | None:
+    image_match = WP_TXT_IMAGE_PATTERN.match(stripped_line)
+    if image_match:
+        return create_image_block(image_match.group(1), image_match.group(2))
+
+    audio_match = WP_TXT_AUDIO_PATTERN.match(stripped_line)
+    if audio_match:
+        return create_audio_block(audio_match.group(1))
+
+    video_match = WP_TXT_VIDEO_PATTERN.match(stripped_line)
+    if video_match:
+        return create_video_block(video_match.group(1))
+
+    file_match = WP_TXT_FILE_PATTERN.match(stripped_line)
+    if file_match:
+        return create_file_block(file_match.group(1))
+
+    return None
 
 
 def _flush_text_blocks(

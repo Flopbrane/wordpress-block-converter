@@ -67,6 +67,30 @@ def test_convert_wp_txt_links_images_code_and_table() -> None:
     assert "<td>大きな区切り</td>" in save_file
 
 
+def test_convert_wp_txt_media_markers_to_wordpress_blocks() -> None:
+    """音声・動画・ファイルのPRE-WPマーカーをWPブロックへ変換するテストです。"""
+    load_file = (
+        "[音声:https://example.com/audio.mp3]\n\n"
+        "[動画:https://example.com/video.mp4]\n\n"
+        "[ファイル:https://example.com/manual.pdf]"
+    )
+
+    save_file = convert_wp_txt_to_gutenberg(load_file)
+
+    assert '<!-- wp:audio {"src":"https://example.com/audio.mp3"} -->' in save_file
+    assert '<audio controls src="https://example.com/audio.mp3"></audio>' in save_file
+    assert "<!-- /wp:audio -->" in save_file
+    assert '<!-- wp:video {"src":"https://example.com/video.mp4"} -->' in save_file
+    assert '<video controls src="https://example.com/video.mp4"></video>' in save_file
+    assert "<!-- /wp:video -->" in save_file
+    assert '<!-- wp:file {"href":"https://example.com/manual.pdf"} -->' in save_file
+    assert '<a href="https://example.com/manual.pdf">manual.pdf</a>' in save_file
+    assert "<!-- /wp:file -->" in save_file
+    assert "[音声:" not in save_file
+    assert "[動画:" not in save_file
+    assert "[ファイル:" not in save_file
+
+
 def test_convert_wp_txt_emphasis_code_to_html_block() -> None:
     """強調コードをwp:html内のstyle付きpre/codeへ変換するテストです。"""
     load_file = (

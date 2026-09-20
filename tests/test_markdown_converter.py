@@ -82,6 +82,55 @@ def test_convert_markdown_adds_ordered_list_attributes() -> None:
     assert "<li>最初</li>" in save_file
 
 
+def test_convert_markdown_wraps_unordered_list_items_with_wordpress_comments() -> None:
+    """ulもWordPressのlist/list-itemコメント付きで出力するテストです。"""
+    load_file = "- 項目1\n- 項目2"
+
+    save_file = convert_markdown_to_gutenberg(load_file)
+
+    assert "<!-- wp:list -->" in save_file
+    assert '<ul class="wp-block-list">' in save_file
+    assert "<!-- wp:list-item -->" in save_file
+    assert "<li>項目1</li>" in save_file
+    assert "<li>項目2</li>" in save_file
+    assert "<!-- /wp:list-item -->" in save_file
+    assert "<!-- /wp:list -->" in save_file
+
+
+def test_convert_markdown_direct_media_urls_to_wordpress_blocks() -> None:
+    """直URLの画像・音声・動画・ファイルをWPブロックへ変換するテストです。"""
+    load_file = (
+        "https://example.com/photo.jpg\n\n"
+        "https://example.com/audio.mp3\n\n"
+        "https://example.com/video.mp4\n\n"
+        "https://example.com/manual.pdf"
+    )
+
+    save_file = convert_markdown_to_gutenberg(load_file)
+
+    assert "<!-- wp:image" in save_file
+    assert '<img src="https://example.com/photo.jpg" alt=""/>' in save_file
+    assert '<!-- wp:audio {"src":"https://example.com/audio.mp3"} -->' in save_file
+    assert '<audio controls src="https://example.com/audio.mp3"></audio>' in save_file
+    assert '<!-- wp:video {"src":"https://example.com/video.mp4"} -->' in save_file
+    assert '<video controls src="https://example.com/video.mp4"></video>' in save_file
+    assert '<!-- wp:file {"href":"https://example.com/manual.pdf"} -->' in save_file
+    assert '<a href="https://example.com/manual.pdf">manual.pdf</a>' in save_file
+
+
+def test_convert_markdown_merges_adjacent_paragraph_blocks_after_render() -> None:
+    """隣接paragraphを指定の完全一致置換で1つに整えるテストです。"""
+    load_file = "1つ目の段落です。\n\n2つ目の段落です。"
+
+    save_file = convert_markdown_to_gutenberg(load_file)
+
+    assert save_file.count("<!-- wp:paragraph -->") == 1
+    assert save_file.count("<!-- /wp:paragraph -->") == 1
+    assert "<p>1つ目の段落です。<br><br>\n2つ目の段落です。</p>" in save_file
+    assert "<!-- /wp:paragraph -->\n\n<!-- wp:paragraph -->" not in save_file
+    assert "</p>\n<p>" not in save_file
+
+
 def test_convert_markdown_keeps_non_table_line_before_heading() -> None:
     """表ではない|行を直後の見出しより前のparagraphにするテストです。"""
     load_file = "| 普通の文章 |\n## 見出し"

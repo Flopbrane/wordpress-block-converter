@@ -82,6 +82,21 @@ def test_lint_reports_broken_image_marker() -> None:
     assert any(issue.level == "error" and "画像" in issue.message for issue in issues)
 
 
+def test_lint_reports_broken_media_markers() -> None:
+    """音声・動画・ファイルマーカーの形式崩れを検出するテストです。"""
+    issues = lint_prewp_txt(
+        "[音声:audio.mp3]\n"
+        "[動画:https://example.com/video.mp4\n"
+        "[ファイル:manual.pdf]"
+    )
+
+    for marker_name in ("音声", "動画", "ファイル"):
+        assert any(
+            issue.level == "error" and marker_name in issue.message
+            for issue in issues
+        )
+
+
 def test_lint_reports_unclosed_image_marker() -> None:
     """閉じ]がない画像マーカーを検出するテストです。"""
     issues = lint_prewp_txt("[画像:https://example.com/image.jpg|説明画像")

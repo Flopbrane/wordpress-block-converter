@@ -19,6 +19,9 @@ WP_TXT_QUOTE_PATTERN: re.Pattern[str] = re.compile(r"^>\s?(.+)$")
 WP_TXT_SPACER_PATTERN: re.Pattern[str] = re.compile(r"^\[余白:(\d+)]$")
 WP_TXT_LINK_PATTERN: re.Pattern[str] = re.compile(r"\[リンク:([^|\]]+)\|(https?://[^\]\s]+)]")
 WP_TXT_IMAGE_PATTERN: re.Pattern[str] = re.compile(r"^\[画像:([^|\]]+)\|([^\]]*)]$")
+WP_TXT_AUDIO_PATTERN: re.Pattern[str] = re.compile(r"^\[音声:(https?://[^\]\s]+)]$")
+WP_TXT_VIDEO_PATTERN: re.Pattern[str] = re.compile(r"^\[動画:(https?://[^\]\s]+)]$")
+WP_TXT_FILE_PATTERN: re.Pattern[str] = re.compile(r"^\[ファイル:(https?://[^\]\s]+)]$")
 WP_TXT_IMAGE_ROW_PATTERN: re.Pattern[str] = re.compile(r"^\[画像横並び:([^\]\n]+)]$")
 
 WP_TXT_HTML_EXEC_START = "[HTML]"

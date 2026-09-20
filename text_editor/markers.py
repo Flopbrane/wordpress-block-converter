@@ -49,6 +49,9 @@ MARKERS: tuple[Marker, ...] = (
     Marker("表", "[表]\n", "\n[/表]", "項目|説明\nA|説明文\nB|説明文"),
     Marker("リンク", "[リンク:", "|https://example.com/]", "表示文字"),
     Marker("画像", "[画像:https://example.com/image.jpg|", "]", "代替テキスト"),
+    Marker("音声", "[音声:https://example.com/audio.mp3]", "", ""),
+    Marker("動画", "[動画:https://example.com/video.mp4]", "", ""),
+    Marker("ファイル", "[ファイル:https://example.com/file.pdf]", "", ""),
     Marker("区切り線", "---", "", ""),
     Marker("余白", "[余白:25]", "", ""),
 )

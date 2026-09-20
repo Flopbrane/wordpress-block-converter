@@ -48,6 +48,9 @@ VALID_LINK_MARKER_PATTERN: re.Pattern[str] = re.compile(
 VALID_IMAGE_MARKER_PATTERN: re.Pattern[str] = re.compile(
     r"^\[画像:(https?://[^|\]\s]+)\|([^\]\n]+)]$"
 )
+VALID_AUDIO_MARKER_PATTERN: re.Pattern[str] = re.compile(r"^\[音声:https?://[^\]\s]+]$")
+VALID_VIDEO_MARKER_PATTERN: re.Pattern[str] = re.compile(r"^\[動画:https?://[^\]\s]+]$")
+VALID_FILE_MARKER_PATTERN: re.Pattern[str] = re.compile(r"^\[ファイル:https?://[^\]\s]+]$")
 SPACER_MARKER_PATTERN: re.Pattern[str] = re.compile(r"\[余白:([^\]\n]+)]")
 
 
@@ -99,6 +102,9 @@ def lint_prewp_txt(load_file: str) -> list[LintIssue]:
     _check_empty_blocks(load_file, issues)
     _check_link_markers(load_file, issues)
     _check_image_markers(load_file, issues)
+    _check_single_url_markers(load_file, "[音声:", VALID_AUDIO_MARKER_PATTERN, "音声", issues)
+    _check_single_url_markers(load_file, "[動画:", VALID_VIDEO_MARKER_PATTERN, "動画", issues)
+    _check_single_url_markers(load_file, "[ファイル:", VALID_FILE_MARKER_PATTERN, "ファイル", issues)
     _check_spacer_markers(load_file, issues)
     _check_table_blocks(load_file, issues)
     return issues
@@ -198,6 +204,26 @@ def _check_image_markers(load_file: str, issues: list[LintIssue]) -> None:
                 line_number,
                 "画像マーカーの形式が崩れています。",
                 "[画像:https://example.com/image.jpg|代替テキスト] の形にしてください。",
+            )
+        )
+
+
+def _check_single_url_markers(
+    load_file: str,
+    marker_start: str,
+    marker_pattern: re.Pattern[str],
+    marker_name: str,
+    issues: list[LintIssue],
+) -> None:
+    for line_number, marker_text in _iter_line_markers(load_file, marker_start):
+        if marker_pattern.match(marker_text):
+            continue
+        issues.append(
+            LintIssue(
+                "error",
+                line_number,
+                f"{marker_name}マーカーの形式が崩れています。",
+                f"{marker_start}https://example.com/file] の形にしてください。",
             )
         )
 
