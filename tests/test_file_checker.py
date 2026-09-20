@@ -61,6 +61,17 @@ def test_select_converter_detects_wp_txt_from_content() -> None:
     assert '<h2 class="wp-block-heading">サービス紹介</h2>' in save_file
 
 
+def test_select_converter_detects_english_wp_txt_from_content() -> None:
+    """拡張子がtxtでも英語PRE-WP記法ならWP-TXT変換するテストです。"""
+    load_file = "[Heading:Service]\n\nBody text."
+
+    converter = select_converter("sample.txt", load_file)
+    save_file = converter(load_file)
+
+    assert '<h2 class="wp-block-heading">Service</h2>' in save_file
+    assert "<p>Body text.</p>" in save_file
+
+
 def test_select_converter_supports_prewp_txt_extension() -> None:
     """.prewp_txtをマーカー付き平文として認識するテストです。"""
     load_file = "【サービス紹介】\n\n本文です。"

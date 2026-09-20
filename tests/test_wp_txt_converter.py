@@ -41,6 +41,82 @@ def test_convert_wp_txt_basic_blocks() -> None:
     assert '<!-- wp:spacer {"height":"50px"} -->' in save_file
 
 
+def test_convert_wp_txt_english_markers_to_wordpress_blocks() -> None:
+    """英語PRE-WPマーカーをWordPressブロックへ変換するテストです。"""
+    load_file = (
+        "[Heading:About WordPress]\n\n"
+        "[Subheading:What it can do]\n\n"
+        "- Write articles\n"
+        "- Insert images\n\n"
+        "[Spacer:50]\n\n"
+        "See [Link:Official site|https://example.com/] for details.\n\n"
+        "[Image:https://example.com/image.jpg|Example image]\n\n"
+        "[Code]\n"
+        "<p>This is code.</p>\n"
+        "[/Code]\n\n"
+        "[EmphasisCode]\n"
+        "functions.php\n"
+        "[/EmphasisCode]\n\n"
+        "[Table]\n"
+        "Item|Description\n"
+        "h2|Large section\n"
+        "[/Table]"
+    )
+
+    save_file = convert_wp_txt_to_gutenberg(load_file)
+
+    assert '<h2 class="wp-block-heading">About WordPress</h2>' in save_file
+    assert '<h3 class="wp-block-heading">What it can do</h3>' in save_file
+    assert "<li>Write articles</li>" in save_file
+    assert '<!-- wp:spacer {"height":"50px"} -->' in save_file
+    assert '<a href="https://example.com/">Official site</a>' in save_file
+    assert '<img src="https://example.com/image.jpg" alt="Example image"/>' in save_file
+    assert "&lt;p&gt;This is code.&lt;/p&gt;" in save_file
+    assert "<code>functions.php</code>" in save_file
+    assert "<!-- wp:table -->" in save_file
+    assert "[Heading:" not in save_file
+    assert "[Code]" not in save_file
+    assert "[Table]" not in save_file
+
+
+def test_convert_wp_txt_english_semantic_blocks() -> None:
+    """英語の意味付きPRE-WPブロックを変換するテストです。"""
+    load_file = (
+        "[List]\n"
+        "First\n"
+        "Second\n"
+        "[/List]\n\n"
+        "[OrderedList]\n"
+        "First\n"
+        "Second\n"
+        "[/OrderedList]\n\n"
+        "[Box]\n"
+        "Box text\n"
+        "[/Box]\n\n"
+        "[Notice]\n"
+        "Notice text\n"
+        "[/Notice]\n\n"
+        "[Supplement]\n"
+        "Supplement text\n"
+        "[/Supplement]\n\n"
+        "[Steps]\n"
+        "Open editor\n"
+        "Save file\n"
+        "[/Steps]"
+    )
+
+    save_file = convert_wp_txt_to_gutenberg(load_file)
+
+    assert "<li>First</li>" in save_file
+    assert '<!-- wp:list {"ordered":true} -->' in save_file
+    assert "Box text" in save_file
+    assert "<strong>Notice</strong><br>Notice text" in save_file
+    assert "<strong>Supplement</strong><br>Supplement text" in save_file
+    assert "<li>Open editor</li>" in save_file
+    assert "[List]" not in save_file
+    assert "[Notice]" not in save_file
+
+
 def test_convert_wp_txt_links_images_code_and_table() -> None:
     """リンク・画像・コード・表を変換するテストです。"""
     load_file = (

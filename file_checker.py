@@ -29,18 +29,26 @@ from dictionaries.separated_values_dict import (
 from dictionaries.text_dict import TEXT_EXTENSIONS
 from dictionaries.wp_txt_dict import (
     WP_TXT_BOX_START,
+    WP_TXT_BOX_START_EN,
     WP_TXT_CODE_START,
+    WP_TXT_CODE_START_EN,
     WP_TXT_EXTENSIONS,
     WP_TXT_HEADING_PATTERN,
     WP_TXT_HTML_EXEC_START,
     WP_TXT_IMAGE_ROW_PATTERN,
     WP_TXT_LIST_START,
+    WP_TXT_LIST_START_EN,
     WP_TXT_NOTICE_START,
+    WP_TXT_NOTICE_START_EN,
     WP_TXT_ORDERED_LIST_START,
+    WP_TXT_ORDERED_LIST_START_EN,
     WP_TXT_STEPS_START,
+    WP_TXT_STEPS_START_EN,
     WP_TXT_SUBHEADING_PATTERN,
     WP_TXT_SUPPLEMENT_START,
+    WP_TXT_SUPPLEMENT_START_EN,
     WP_TXT_TABLE_START,
+    WP_TXT_TABLE_START_EN,
 )
 
 SUPPORTED_FILE_PATTERN = (
@@ -187,14 +195,22 @@ def _looks_like_wp_txt(load_file: str) -> bool:
         stripped_line = line.strip()
         if stripped_line in {
             WP_TXT_CODE_START,
+            WP_TXT_CODE_START_EN,
             WP_TXT_BOX_START,
+            WP_TXT_BOX_START_EN,
             WP_TXT_HTML_EXEC_START,
             WP_TXT_LIST_START,
+            WP_TXT_LIST_START_EN,
             WP_TXT_NOTICE_START,
+            WP_TXT_NOTICE_START_EN,
             WP_TXT_ORDERED_LIST_START,
+            WP_TXT_ORDERED_LIST_START_EN,
             WP_TXT_STEPS_START,
+            WP_TXT_STEPS_START_EN,
             WP_TXT_SUPPLEMENT_START,
+            WP_TXT_SUPPLEMENT_START_EN,
             WP_TXT_TABLE_START,
+            WP_TXT_TABLE_START_EN,
         }:
             return True
         if WP_TXT_IMAGE_ROW_PATTERN.match(stripped_line):

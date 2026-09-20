@@ -15,7 +15,10 @@ URL_PATTERN: re.Pattern[str] = re.compile(r"(?<![\"'=])\bhttps?://[^\s<]+")
 BOLD_PATTERN: re.Pattern[str] = re.compile(r"\*\*(.+?)\*\*")
 ITALIC_PATTERN: re.Pattern[str] = re.compile(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)")
 INLINE_CODE_PATTERN: re.Pattern[str] = re.compile(r"`([^`\n]+)`")
-PREWP_BOLD_PATTERN: re.Pattern[str] = re.compile(r"\[太字](.+?)\[/太字]")
+PREWP_BOLD_PATTERN: re.Pattern[str] = re.compile(
+    r"\[(?:太字|Bold)](.+?)\[/(?:太字|Bold)]",
+    re.IGNORECASE,
+)
 
 
 def format_inline_text(

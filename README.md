@@ -84,51 +84,76 @@ Save marked plain text as `.prewp_txt`. Existing `.wp_txt` and `.wptxt` files ar
 
 Marked plain text is a lightly marked text format for writing WordPress articles more predictably than plain `.txt`. Use `.prewp_txt` for new files; `.wp_txt` and `.wptxt` remain supported.
 
+The English markers below are recommended for new English-language drafts. Existing Japanese markers are still supported for backward compatibility.
+
 | Syntax | Output |
 |---|---|
-| `【Heading】` | h2 heading |
-| `《Subheading》` | h3 heading |
+| `[Heading:Heading text]` | h2 heading |
+| `[Subheading:Subheading text]` | h3 heading |
 | Blank line | Paragraph break |
-| `・Item` | Unordered list |
+| `- Item` or `* Item` | Unordered list |
 | `1. Item` | Ordered list |
 | `> Quote` | Quote |
 | `---` | Separator |
-| `[余白:50]` | 50px spacer |
-| `[リンク:Label|URL]` | Link |
-| `[画像:URL|Alt text]` | Image |
-| `[コード]` to `[/コード]` | Code block |
-| `[強調コード]` to `[/強調コード]` | Emphasized code block |
-| `[表]` to `[/表]` | Table |
+| `[Spacer:50]` | 50px spacer |
+| `[Link:Label|https://example.com/]` | Link |
+| `[Image:https://example.com/image.jpg|Alt text]` | Image |
+| `[Audio:https://example.com/audio.mp3]` | Audio block |
+| `[Video:https://example.com/video.mp4]` | Video block |
+| `[File:https://example.com/file.pdf]` | File block |
+| `[Code]` to `[/Code]` | Code block |
+| `[EmphasisCode]` to `[/EmphasisCode]` | Emphasized code block |
+| `[List]` to `[/List]` | Explicit unordered list |
+| `[OrderedList]` to `[/OrderedList]` | Explicit ordered list |
+| `[Table]` to `[/Table]` | Table |
+| `[HTML]` to `[/HTML]` | Raw HTML block |
+| `[Box]` to `[/Box]` | Boxed content |
+| `[Notice]` to `[/Notice]` | Notice box |
+| `[Supplement]` to `[/Supplement]` | Supplement box |
+| `[Steps]` to `[/Steps]` | Ordered steps |
+| `[ImageRow:24px]` to `[/ImageRow]` | Row of images with a gap |
 
 Example:
 
 ```text
-【About WordPress】
+[Heading:About WordPress]
 
 WordPress is a system for creating websites and blogs.
 
-《What it can do》
+[Subheading:What it can do]
 
-・Write articles
-・Insert images
-・Create tables
+- Write articles
+- Insert images
+- Create tables
 
-See [リンク:Official site|https://example.com/] for details.
+See [Link:Official site|https://example.com/] for details.
 
-[画像:https://example.com/image.jpg|Example image]
+[Image:https://example.com/image.jpg|Example image]
 
-[コード]
+[Audio:https://example.com/audio.mp3]
+
+[Video:https://example.com/video.mp4]
+
+[File:https://example.com/manual.pdf]
+
+[Code]
 <p>This is a paragraph.</p>
-[/コード]
+[/Code]
 
-[強調コード]
+[EmphasisCode]
 functions.php
-[/強調コード]
+[/EmphasisCode]
 
-[表]
+[List]
+Item 1
+Item 2
+Item 3
+[/List]
+
+[Table]
 Item|Description
 h2|Large section
-[/表]
+[/Table]
 ```
 
 ### Markdown

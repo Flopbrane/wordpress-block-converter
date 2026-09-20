@@ -26,13 +26,19 @@ from blocks.table import create_table_block_from_rows
 from dictionaries.wp_txt_dict import (
     WP_TXT_AUDIO_PATTERN,
     WP_TXT_BOX_END,
+    WP_TXT_BOX_END_EN,
     WP_TXT_BOX_START,
+    WP_TXT_BOX_START_EN,
     WP_TXT_CODE_END,
+    WP_TXT_CODE_END_EN,
     WP_TXT_CODE_OUTPUT_MODE,
     WP_TXT_CODE_OUTPUT_MODES,
     WP_TXT_CODE_START,
+    WP_TXT_CODE_START_EN,
     WP_TXT_EMPHASIS_CODE_END,
+    WP_TXT_EMPHASIS_CODE_END_EN,
     WP_TXT_EMPHASIS_CODE_START,
+    WP_TXT_EMPHASIS_CODE_START_EN,
     WP_TXT_FILE_PATTERN,
     WP_TXT_HEADING_PATTERN,
     WP_TXT_HTML_END,
@@ -41,27 +47,40 @@ from dictionaries.wp_txt_dict import (
     WP_TXT_HTML_START,
     WP_TXT_IMAGE_PATTERN,
     WP_TXT_IMAGE_ROW_END,
+    WP_TXT_IMAGE_ROW_END_EN,
     WP_TXT_IMAGE_ROW_PATTERN,
     WP_TXT_LINK_PATTERN,
     WP_TXT_LIST_END,
+    WP_TXT_LIST_END_EN,
     WP_TXT_LIST_START,
+    WP_TXT_LIST_START_EN,
     WP_TXT_NOTICE_END,
+    WP_TXT_NOTICE_END_EN,
     WP_TXT_NOTICE_START,
+    WP_TXT_NOTICE_START_EN,
     WP_TXT_ORDERED_LIST_END,
+    WP_TXT_ORDERED_LIST_END_EN,
     WP_TXT_ORDERED_LIST_PATTERN,
     WP_TXT_ORDERED_LIST_START,
+    WP_TXT_ORDERED_LIST_START_EN,
     WP_TXT_PARAGRAPH_END,
     WP_TXT_PARAGRAPH_START,
     WP_TXT_QUOTE_PATTERN,
     WP_TXT_SEPARATOR_MARKER,
     WP_TXT_SPACER_PATTERN,
     WP_TXT_STEPS_END,
+    WP_TXT_STEPS_END_EN,
     WP_TXT_STEPS_START,
+    WP_TXT_STEPS_START_EN,
     WP_TXT_SUBHEADING_PATTERN,
     WP_TXT_SUPPLEMENT_END,
+    WP_TXT_SUPPLEMENT_END_EN,
     WP_TXT_SUPPLEMENT_START,
+    WP_TXT_SUPPLEMENT_START_EN,
     WP_TXT_TABLE_END,
+    WP_TXT_TABLE_END_EN,
     WP_TXT_TABLE_START,
+    WP_TXT_TABLE_START_EN,
     WP_TXT_UNORDERED_LIST_PATTERN,
     WP_TXT_VIDEO_PATTERN,
 )
@@ -77,7 +96,9 @@ PrewpBlockType = Literal[
     "html_exec",
     "box",
     "notice",
+    "notice_en",
     "supplement",
+    "supplement_en",
     "steps",
     "image_row",
     "table",
@@ -85,21 +106,34 @@ PrewpBlockType = Literal[
 
 TAG_PAIRS: dict[str, tuple[str, PrewpBlockType]] = {
     WP_TXT_CODE_START: (WP_TXT_CODE_END, "code"),
+    WP_TXT_CODE_START_EN: (WP_TXT_CODE_END_EN, "code"),
     WP_TXT_EMPHASIS_CODE_START: (WP_TXT_EMPHASIS_CODE_END, "emphasis_code"),
+    WP_TXT_EMPHASIS_CODE_START_EN: (WP_TXT_EMPHASIS_CODE_END_EN, "emphasis_code"),
     WP_TXT_LIST_START: (WP_TXT_LIST_END, "list"),
+    WP_TXT_LIST_START_EN: (WP_TXT_LIST_END_EN, "list"),
     WP_TXT_ORDERED_LIST_START: (WP_TXT_ORDERED_LIST_END, "ordered_list"),
+    WP_TXT_ORDERED_LIST_START_EN: (WP_TXT_ORDERED_LIST_END_EN, "ordered_list"),
     WP_TXT_PARAGRAPH_START: (WP_TXT_PARAGRAPH_END, "paragraph"),
     WP_TXT_HTML_START: (WP_TXT_HTML_END, "html"),
     WP_TXT_HTML_EXEC_START: (WP_TXT_HTML_EXEC_END, "html_exec"),
     WP_TXT_BOX_START: (WP_TXT_BOX_END, "box"),
+    WP_TXT_BOX_START_EN: (WP_TXT_BOX_END_EN, "box"),
     WP_TXT_NOTICE_START: (WP_TXT_NOTICE_END, "notice"),
+    WP_TXT_NOTICE_START_EN: (WP_TXT_NOTICE_END_EN, "notice_en"),
     WP_TXT_SUPPLEMENT_START: (WP_TXT_SUPPLEMENT_END, "supplement"),
+    WP_TXT_SUPPLEMENT_START_EN: (WP_TXT_SUPPLEMENT_END_EN, "supplement_en"),
     WP_TXT_STEPS_START: (WP_TXT_STEPS_END, "steps"),
+    WP_TXT_STEPS_START_EN: (WP_TXT_STEPS_END_EN, "steps"),
     WP_TXT_TABLE_START: (WP_TXT_TABLE_END, "table"),
+    WP_TXT_TABLE_START_EN: (WP_TXT_TABLE_END_EN, "table"),
+}
+TAG_PAIRS_BY_LOWER: dict[str, tuple[str, PrewpBlockType]] = {
+    start_tag.lower(): (end_tag, block_type)
+    for start_tag, (end_tag, block_type) in TAG_PAIRS.items()
 }
 PREWP_TAG_PATTERN: re.Pattern[str] = re.compile(
-    r"\[画像横並び:[^\]\n]+]|"
-    + "|".join(re.escape(tag) for tag in sorted(TAG_PAIRS, key=len, reverse=True))
+    r"\[(?:画像横並び|ImageRow):[^\]\n]+]|"
+    + "|".join(re.escape(tag) for tag in sorted(TAG_PAIRS, key=len, reverse=True)),
 )
 
 
@@ -168,8 +202,14 @@ def render_wordpress(document: list[PrewpBlock]) -> str:
             blocks.append(_create_box_block(prewp_block.text))
         elif prewp_block.block_type == "notice":
             blocks.append(_create_note_box_block(prewp_block.text, "注意", "#fff4e5", "#c2410c"))
+        elif prewp_block.block_type == "notice_en":
+            blocks.append(_create_note_box_block(prewp_block.text, "Notice", "#fff4e5", "#c2410c"))
         elif prewp_block.block_type == "supplement":
             blocks.append(_create_note_box_block(prewp_block.text, "補足", "#eef6ff", "#0369a1"))
+        elif prewp_block.block_type == "supplement_en":
+            blocks.append(
+                _create_note_box_block(prewp_block.text, "Supplement", "#eef6ff", "#0369a1")
+            )
         elif prewp_block.block_type == "steps":
             blocks.append(_create_explicit_list_block(prewp_block.text, ordered=True))
         elif prewp_block.block_type == "image_row":
@@ -188,9 +228,11 @@ def _append_text_block(blocks: list[PrewpBlock], text: str) -> None:
 def _get_tag_definition(start_tag: str) -> tuple[str, PrewpBlockType, str]:
     image_row_match = WP_TXT_IMAGE_ROW_PATTERN.match(start_tag)
     if image_row_match:
+        if start_tag.lower().startswith("[imagerow:"):
+            return WP_TXT_IMAGE_ROW_END_EN, "image_row", image_row_match.group(1).strip()
         return WP_TXT_IMAGE_ROW_END, "image_row", image_row_match.group(1).strip()
 
-    end_tag, block_type = TAG_PAIRS[start_tag]
+    end_tag, block_type = TAG_PAIRS_BY_LOWER[start_tag.lower()]
     return end_tag, block_type, ""
 
 
@@ -239,7 +281,7 @@ def _render_text_blocks(text: str) -> list[str]:
                 _flush_list(blocks, list_items, list_ordered)
                 list_items = []
             list_ordered = False
-            list_items.append(unordered_list_match.group(1))
+            list_items.append(_first_match_group(unordered_list_match))
             continue
 
         ordered_list_match = WP_TXT_ORDERED_LIST_PATTERN.match(stripped_line)
@@ -290,13 +332,13 @@ def _append_standalone_block(
     heading_match = WP_TXT_HEADING_PATTERN.match(stripped_line)
     if heading_match:
         _flush_text_blocks(blocks, paragraph_lines, list_items, list_ordered, quote_lines)
-        blocks.append(_create_safe_heading_block(heading_match.group(1), 2))
+        blocks.append(_create_safe_heading_block(_first_match_group(heading_match), 2))
         return True
 
     subheading_match = WP_TXT_SUBHEADING_PATTERN.match(stripped_line)
     if subheading_match:
         _flush_text_blocks(blocks, paragraph_lines, list_items, list_ordered, quote_lines)
-        blocks.append(_create_safe_heading_block(subheading_match.group(1), 3))
+        blocks.append(_create_safe_heading_block(_first_match_group(subheading_match), 3))
         return True
 
     if stripped_line == WP_TXT_SEPARATOR_MARKER:
@@ -514,6 +556,10 @@ def _detect_table_delimiter(line: str) -> str:
 
 def _convert_wp_txt_links(text: str) -> str:
     return WP_TXT_LINK_PATTERN.sub(r"[\1](\2)", text)
+
+
+def _first_match_group(match: re.Match[str]) -> str:
+    return next(group for group in match.groups() if group is not None)
 
 
 def _create_safe_heading_block(text: str, level: int) -> str:
