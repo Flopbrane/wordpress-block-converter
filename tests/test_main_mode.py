@@ -291,6 +291,46 @@ def test_convert_file_applies_middle_mode_like_office(tmp_path: Path) -> None:
     assert "<!-- wp:paragraph -->" in save_file
 
 
+def test_convert_file_middle_mode_keeps_html_unordered_list_as_list_block(
+    tmp_path: Path,
+) -> None:
+    """middle modeでもHTMLのul/liをWordPress listブロックとして残すテストです。"""
+    load_file_path = tmp_path / "list.html"
+    save_file_path = tmp_path / "list_wordpress.html"
+    load_file_path.write_text("<ul><li>りんご</li><li>みかん</li></ul>", encoding="utf-8")
+
+    convert_file(load_file_path, save_file_path, mode="middle")
+
+    save_file = save_file_path.read_text(encoding="utf-8")
+    assert "<!-- wp:list -->" in save_file
+    assert '<ul class="wp-block-list">' in save_file
+    assert "<!-- wp:list-item -->" in save_file
+    assert "<li>りんご</li>" in save_file
+    assert "<li>みかん</li>" in save_file
+    assert "<!-- /wp:list-item -->" in save_file
+    assert "<!-- /wp:list -->" in save_file
+
+
+def test_convert_file_middle_mode_keeps_html_ordered_list_as_list_block(
+    tmp_path: Path,
+) -> None:
+    """middle modeでもHTMLのol/liをWordPress ordered listブロックとして残すテストです。"""
+    load_file_path = tmp_path / "ordered.html"
+    save_file_path = tmp_path / "ordered_wordpress.html"
+    load_file_path.write_text("<ol><li>最初</li><li>次</li></ol>", encoding="utf-8")
+
+    convert_file(load_file_path, save_file_path, mode="middle")
+
+    save_file = save_file_path.read_text(encoding="utf-8")
+    assert '<!-- wp:list {"ordered":true} -->' in save_file
+    assert '<ol class="wp-block-list">' in save_file
+    assert "<!-- wp:list-item -->" in save_file
+    assert "<li>最初</li>" in save_file
+    assert "<li>次</li>" in save_file
+    assert "<!-- /wp:list-item -->" in save_file
+    assert "<!-- /wp:list -->" in save_file
+
+
 def test_convert_file_office_mode_removes_dangerous_html(tmp_path: Path) -> None:
     """office modeで危険タグや危険属性を除去するテストです。"""
     load_file_path = tmp_path / "danger.html"

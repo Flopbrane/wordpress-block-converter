@@ -52,10 +52,11 @@ HEADING_BLOCK_PATTERN: re.Pattern[str] = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 SAFE_BLOCK_START_COMMENT_PATTERN: re.Pattern[str] = re.compile(
-    r"^\s*wp:(paragraph|heading|code|table|separator)(?:\s+\{\"level\":[2-5]\})?\s*$"
+    r"^\s*wp:(paragraph|heading|code|table|separator|list|list-item)"
+    r"(?:\s+\{\"(?:level\":[2-5]|ordered\":true)\})?\s*$"
 )
 SAFE_BLOCK_END_COMMENT_PATTERN: re.Pattern[str] = re.compile(
-    r"^\s*/wp:(paragraph|heading|code|table|separator)\s*$"
+    r"^\s*/wp:(paragraph|heading|code|table|separator|list|list-item)\s*$"
 )
 
 HEADING_LEVEL_MAP: dict[str, str] = {

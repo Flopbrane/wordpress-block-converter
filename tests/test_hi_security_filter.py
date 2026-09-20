@@ -123,6 +123,54 @@ def test_apply_hi_security_filter_keeps_table_block_comments() -> None:
     assert "<!-- /wp:table -->" in save_file
 
 
+def test_apply_hi_security_filter_keeps_list_block_comments() -> None:
+    """list/list-itemブロックコメントとwp-block-list classを残すテストです。"""
+    load_file = (
+        "<!-- wp:list -->\n"
+        '<ul class="wp-block-list">\n'
+        "<!-- wp:list-item -->\n"
+        "<li>りんご</li>\n"
+        "<!-- /wp:list-item -->\n"
+        "<!-- wp:list-item -->\n"
+        "<li>みかん</li>\n"
+        "<!-- /wp:list-item -->\n"
+        "</ul>\n"
+        "<!-- /wp:list -->"
+    )
+
+    save_file = apply_hi_security_filter(load_file)
+
+    assert "<!-- wp:list -->" in save_file
+    assert '<ul class="wp-block-list">' in save_file
+    assert "<!-- wp:list-item -->" in save_file
+    assert "<li>りんご</li>" in save_file
+    assert "<li>みかん</li>" in save_file
+    assert "<!-- /wp:list-item -->" in save_file
+    assert "<!-- /wp:list -->" in save_file
+
+
+def test_apply_hi_security_filter_keeps_ordered_list_block_comments() -> None:
+    """ordered listブロックコメントとwp-block-list classを残すテストです。"""
+    load_file = (
+        '<!-- wp:list {"ordered":true} -->\n'
+        '<ol class="wp-block-list">\n'
+        "<!-- wp:list-item -->\n"
+        "<li>最初</li>\n"
+        "<!-- /wp:list-item -->\n"
+        "</ol>\n"
+        "<!-- /wp:list -->"
+    )
+
+    save_file = apply_hi_security_filter(load_file)
+
+    assert '<!-- wp:list {"ordered":true} -->' in save_file
+    assert '<ol class="wp-block-list">' in save_file
+    assert "<!-- wp:list-item -->" in save_file
+    assert "<li>最初</li>" in save_file
+    assert "<!-- /wp:list-item -->" in save_file
+    assert "<!-- /wp:list -->" in save_file
+
+
 def test_apply_hi_security_filter_converts_paragraph_dash_to_separator() -> None:
     """段落内の---をWordPress区切り線へ変換するテストです。"""
     load_file = (
