@@ -10,7 +10,7 @@ import json
 from typing import Any
 
 from blocks.heading import create_heading_block
-from blocks.list_block import create_list_block
+from blocks.list_block import create_list_block, normalize_adjacent_list_blocks
 from blocks.paragraph import create_paragraph_block
 from blocks.table import create_table_block_from_rows
 from dictionaries.json_dict import (
@@ -32,7 +32,7 @@ def convert_json_to_gutenberg(load_file: str) -> str:
 
     blocks: list[str] = []
     _append_json_blocks(blocks, json_data, heading_level=1)
-    return "\n\n".join(blocks)
+    return normalize_adjacent_list_blocks("\n\n".join(blocks))
 
 
 def _append_json_blocks(blocks: list[str], value: Any, heading_level: int = 2) -> None:

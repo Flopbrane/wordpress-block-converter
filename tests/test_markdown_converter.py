@@ -97,6 +97,41 @@ def test_convert_markdown_wraps_unordered_list_items_with_wordpress_comments() -
     assert "<!-- /wp:list -->" in save_file
 
 
+def test_convert_markdown_merges_adjacent_unordered_list_blocks_after_render() -> None:
+    """隣接したul listブロックを完全一致置換で1つに寄せるテストです。"""
+    load_file = "- 項目1\n\n- 項目2"
+
+    save_file = convert_markdown_to_gutenberg(load_file)
+
+    assert save_file.count("<!-- wp:list -->") == 1
+    assert save_file.count("<!-- /wp:list -->") == 1
+    assert save_file.count('<ul class="wp-block-list">') == 1
+    assert "<li>項目1</li>" in save_file
+    assert "<li>項目2</li>" in save_file
+    assert (
+        "</ul>\n<!-- /wp:list -->\n\n<!-- wp:list -->\n<ul class=\"wp-block-list\">"
+        not in save_file
+    )
+
+
+def test_convert_markdown_merges_adjacent_ordered_list_blocks_after_render() -> None:
+    """隣接したol listブロックも完全一致置換で1つに寄せるテストです。"""
+    load_file = "1. 最初\n\n2. 次"
+
+    save_file = convert_markdown_to_gutenberg(load_file)
+
+    assert save_file.count('<!-- wp:list {"ordered":true} -->') == 1
+    assert save_file.count("<!-- /wp:list -->") == 1
+    assert save_file.count('<ol class="wp-block-list">') == 1
+    assert "<li>最初</li>" in save_file
+    assert "<li>次</li>" in save_file
+    assert (
+        "</ol>\n<!-- /wp:list -->\n\n"
+        '<!-- wp:list {"ordered":true} -->\n<ol class="wp-block-list">'
+        not in save_file
+    )
+
+
 def test_convert_markdown_direct_media_urls_to_wordpress_blocks() -> None:
     """直URLの画像・音声・動画・ファイルをWPブロックへ変換するテストです。"""
     load_file = (

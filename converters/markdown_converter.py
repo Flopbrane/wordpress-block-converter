@@ -11,6 +11,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Literal, cast
 
+from blocks.list_block import normalize_adjacent_list_blocks
 from blocks.paragraph import create_paragraph_block
 from converters.markdown_layout_converter import convert_markdown_layout_to_gutenberg
 from dictionaries.html_dict import DIRECT_URL_RULES, EMBED_PROVIDER_RULES
@@ -229,6 +230,7 @@ def render_markdown_blocks_to_wordpress(markdown_blocks: list[MarkdownBlock]) ->
 
 def _normalize_rendered_markdown_html(save_file: str) -> str:
     """変換後HTMLの隣接paragraphを、指定の完全一致置換で整えます。"""
+    save_file = normalize_adjacent_list_blocks(save_file)
     save_file = save_file.replace(
         "<!-- /wp:paragraph -->\n\n<!-- wp:paragraph -->",
         "",

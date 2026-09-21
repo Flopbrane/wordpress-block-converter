@@ -10,6 +10,19 @@ from typing import Literal
 
 from blocks.inline import format_inline_text
 
+ADJACENT_UNORDERED_LIST_BLOCK_PATTERN = (
+    "</ul>\n"
+    "<!-- /wp:list -->\n\n"
+    "<!-- wp:list -->\n"
+    '<ul class="wp-block-list">'
+)
+ADJACENT_ORDERED_LIST_BLOCK_PATTERN = (
+    "</ol>\n"
+    "<!-- /wp:list -->\n\n"
+    '<!-- wp:list {"ordered":true} -->\n'
+    '<ol class="wp-block-list">'
+)
+
 
 def create_list_block(
     items: list[str],
@@ -44,3 +57,9 @@ def create_list_block(
         f"{list_html}\n"
         "<!-- /wp:list -->"
     )
+
+
+def normalize_adjacent_list_blocks(save_file: str) -> str:
+    """隣接した同種のlistブロックを、完全一致置換で1つのlistへ寄せます。"""
+    save_file = save_file.replace(ADJACENT_UNORDERED_LIST_BLOCK_PATTERN, "\n\n")
+    return save_file.replace(ADJACENT_ORDERED_LIST_BLOCK_PATTERN, "\n\n")

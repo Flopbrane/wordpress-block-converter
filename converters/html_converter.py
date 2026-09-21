@@ -12,6 +12,7 @@ from html import unescape
 from re import Pattern
 from typing import Any, cast
 
+from blocks.list_block import normalize_adjacent_list_blocks
 from dictionaries.html_dict import (
     DIRECT_URL_RULES,
     EMBED_PROVIDER_RULES,
@@ -131,7 +132,7 @@ def convert_html_to_gutenberg(load_file: str) -> str:
         elif block_type == "spacer":
             blocks.append(rule["converter"]())
 
-    return "\n\n".join(blocks)
+    return normalize_adjacent_list_blocks("\n\n".join(blocks))
 
 
 def _clean_html_text(text: str) -> str:

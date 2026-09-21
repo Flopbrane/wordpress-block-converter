@@ -273,6 +273,19 @@ def test_convert_wp_txt_explicit_list_converts_all_lines_to_list_items() -> None
     assert "<li>項目3</li>" in save_file
 
 
+def test_convert_wp_txt_merges_adjacent_unordered_list_blocks_after_render() -> None:
+    """空行で分かれた箇条書きlistブロックを1つに寄せるテストです。"""
+    load_file = "・項目1\n\n・項目2"
+
+    save_file = convert_wp_txt_to_gutenberg(load_file)
+
+    assert save_file.count("<!-- wp:list -->") == 1
+    assert save_file.count("<!-- /wp:list -->") == 1
+    assert save_file.count('<ul class="wp-block-list">') == 1
+    assert "<li>項目1</li>" in save_file
+    assert "<li>項目2</li>" in save_file
+
+
 def test_convert_wp_txt_ordered_explicit_list() -> None:
     """[番号リスト]をolへ変換するテストです。"""
     load_file = (

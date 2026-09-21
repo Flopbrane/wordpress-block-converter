@@ -16,7 +16,7 @@ from typing import Literal
 from blocks.code import create_code_block, create_emphasis_code_block
 from blocks.image import create_image_block
 from blocks.inline import format_inline_text
-from blocks.list_block import create_list_block
+from blocks.list_block import create_list_block, normalize_adjacent_list_blocks
 from blocks.media import create_audio_block, create_file_block, create_video_block
 from blocks.paragraph import create_paragraph_block
 from blocks.quote import create_quote_block
@@ -217,7 +217,7 @@ def render_wordpress(document: list[PrewpBlock]) -> str:
         elif prewp_block.block_type == "table":
             _flush_table(blocks, prewp_block.text.splitlines())
 
-    return "\n\n".join(block for block in blocks if block)
+    return normalize_adjacent_list_blocks("\n\n".join(block for block in blocks if block))
 
 
 def _append_text_block(blocks: list[PrewpBlock], text: str) -> None:
