@@ -1,4 +1,5 @@
 """メインの駆動ファイルです"""
+# pylint: disable=wrong-import-position,wrong-import-order
 #########################
 # Author: F.Kurokawa
 # Description:
@@ -10,8 +11,8 @@ from portable_runtime import configure_portable_runtime
 configure_portable_runtime()
 
 import argparse
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 from converters.hi_security_filter import apply_hi_security_filter
 from dictionaries.hi_security_dict import (

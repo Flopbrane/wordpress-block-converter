@@ -236,6 +236,20 @@ def test_convert_wp_txt_code_block_uses_wp_code_and_keeps_quotes() -> None:
     assert "<!-- /wp:code -->" in save_file
 
 
+def test_convert_wp_txt_code_block_does_not_double_escape_html_entities() -> None:
+    """escape済みHTMLコードを[Code]で二重escapeしないテストです。"""
+    load_file = (
+        "[Code]\n"
+        "&lt;h1&gt;Hello&lt;/h1&gt;\n"
+        "[/Code]"
+    )
+
+    save_file = convert_wp_txt_to_gutenberg(load_file)
+
+    assert "&lt;h1&gt;Hello&lt;/h1&gt;" in save_file
+    assert "&amp;lt;h1&amp;gt;" not in save_file
+
+
 def test_convert_wp_txt_inline_position_code_marker_becomes_block() -> None:
     """文章途中の[コード]もPRE-WPタグとして解析するテストです。"""
     load_file = (

@@ -7,20 +7,14 @@
 from __future__ import annotations
 
 import argparse
-from difflib import get_close_matches
 import json
 import re
 from dataclasses import dataclass
+from difflib import get_close_matches
 from html.parser import HTMLParser
 from pathlib import Path
 
 try:
-    from .dictionaries.html_dict import (
-        ALLOWED_HTML_TAGS,
-        DISPLAY_UNSTABLE_CLASS_KEYWORDS,
-        NON_NORMAL_UNSTABLE_CORE_BLOCKS,
-        WORDPRESS_CORE_BLOCKS,
-    )
     from .dictionaries.hi_security_dict import (
         BLOCKED_ATTRIBUTES,
         BLOCKED_TAGS,
@@ -30,13 +24,13 @@ try:
         SAFE_CONVERSION_MODES,
         normalize_conversion_mode,
     )
-except ImportError:
-    from dictionaries.html_dict import (
+    from .dictionaries.html_dict import (
         ALLOWED_HTML_TAGS,
         DISPLAY_UNSTABLE_CLASS_KEYWORDS,
         NON_NORMAL_UNSTABLE_CORE_BLOCKS,
         WORDPRESS_CORE_BLOCKS,
     )
+except ImportError:
     from dictionaries.hi_security_dict import (
         BLOCKED_ATTRIBUTES,
         BLOCKED_TAGS,
@@ -45,6 +39,12 @@ except ImportError:
         NORMAL_MODE,
         SAFE_CONVERSION_MODES,
         normalize_conversion_mode,
+    )
+    from dictionaries.html_dict import (
+        ALLOWED_HTML_TAGS,
+        DISPLAY_UNSTABLE_CLASS_KEYWORDS,
+        NON_NORMAL_UNSTABLE_CORE_BLOCKS,
+        WORDPRESS_CORE_BLOCKS,
     )
 
 
@@ -240,7 +240,10 @@ CSS_RESTRICTION_RULES: tuple[tuple[re.Pattern[str], str, str], ...] = (
         "本文や画像の一部が見えなくなることがあるため、装飾以外では避けてください。",
     ),
     (
-        re.compile(r"\b(?:width|height|max-width|max-height)\s*:\s*0(?:px|em|rem|%)?\b", re.IGNORECASE),
+        re.compile(
+            r"\b(?:width|height|max-width|max-height)\s*:\s*0(?:px|em|rem|%)?\b",
+            re.IGNORECASE,
+        ),
         "CSSに幅または高さを0にする指定があります。",
         "要素が実質的に表示されないことがあります。非表示目的でない場合はサイズ指定を見直してください。",
     ),
@@ -494,7 +497,10 @@ def _lint_raw_html_block_comment(
     ))
 
 
-def _find_open_block_name(block_stack: list[dict[str, str | int]], target_block_name: str) -> str | None:
+def _find_open_block_name(
+    block_stack: list[dict[str, str | int]],
+    target_block_name: str,
+) -> str | None:
     for block_info in reversed(block_stack):
         block_name = str(block_info["name"])
         if block_name == target_block_name:

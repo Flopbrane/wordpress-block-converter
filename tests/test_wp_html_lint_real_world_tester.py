@@ -9,7 +9,6 @@ import pytest
 
 from lint import lint_css, lint_wp_html
 
-
 REAL_WORLD_BAD_PARAGRAPH = """<!-- wp:paragraph -->
 <p>("sample-theme/" のように、<strong>最後に「/」が付いているものはフォルダ</strong>です。<br>
 フォルダは、ファイルを入れておく箱のようなものです。<br><br>

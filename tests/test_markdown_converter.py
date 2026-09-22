@@ -219,3 +219,67 @@ def test_convert_markdown_does_not_parse_markdown_inside_fenced_code() -> None:
     assert "<!-- wp:table -->" not in save_file
     assert "## 見出しではありません" in save_file
     assert 'print("&lt;x&gt;&amp;")' in save_file
+
+
+def test_convert_markdown_fenced_python_code_keeps_body() -> None:
+    """pythonフェンス内のコード本文を表示用コードとして保持するテストです。"""
+    load_file = (
+        "```python\n"
+        "def hello():\n"
+        "    print(\"Hello\")\n"
+        "```\n"
+    )
+
+    save_file = convert_markdown_to_gutenberg(load_file)
+
+    assert "<!-- wp:code -->" in save_file
+    assert 'def hello():\n    print("Hello")' in save_file
+    assert "&quot;" not in save_file
+    assert "<!-- /wp:code -->" in save_file
+
+
+def test_convert_markdown_fenced_html_code_is_escaped_for_display() -> None:
+    """htmlフェンス内のタグを実行HTMLではなく表示用コードにするテストです。"""
+    load_file = (
+        "```html\n"
+        '<h1 class="title">Hello &amp; goodbye</h1>\n'
+        "```\n"
+    )
+
+    save_file = convert_markdown_to_gutenberg(load_file)
+
+    assert '&lt;h1 class="title"&gt;Hello &amp;amp; goodbye&lt;/h1&gt;' in save_file
+    assert '<h1 class="title">Hello' not in save_file
+    assert "&quot;" not in save_file
+
+
+def test_convert_markdown_fenced_html_code_does_not_double_escape_entities() -> None:
+    """既にescape済みのHTMLコードを二重escapeしないテストです。"""
+    load_file = (
+        "```html\n"
+        "&lt;h1&gt;Hello &amp;amp; goodbye&lt;/h1&gt;\n"
+        "```\n"
+    )
+
+    save_file = convert_markdown_to_gutenberg(load_file)
+
+    assert "&lt;h1&gt;Hello &amp;amp; goodbye&lt;/h1&gt;" in save_file
+    assert "&amp;lt;h1&amp;gt;" not in save_file
+
+
+def test_convert_markdown_multiline_code_keeps_line_breaks_without_leading_blank() -> None:
+    """複数行コードの改行を保持し、不要な先頭空行を追加しないテストです。"""
+    load_file = (
+        "```json\n"
+        "{\n"
+        '  "name": "wp-conv",\n'
+        '  "enabled": true\n'
+        "}\n"
+        "```\n"
+    )
+
+    save_file = convert_markdown_to_gutenberg(load_file)
+
+    assert '<pre class="wp-block-code"><code>{\n  "name": "wp-conv",' in save_file
+    assert '\n  "enabled": true\n}' in save_file
+    assert "<code>\n{" not in save_file
