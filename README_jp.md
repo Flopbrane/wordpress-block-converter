@@ -337,7 +337,7 @@ python .\lint.py .\style.txt --input-type css
 python .\lint.py .\your_article.html --input-type wp-html
 ```
 
-事業所WPや高セキュリティ環境を想定して確認する場合は、`--mode` を指定できます。省略時は `high-security` として確認します。
+事業所WPや高セキュリティ環境を想定して確認する場合は、`--mode` を指定できます。省略時は `normal` として確認します。
 
 ```powershell
 python .\lint.py .\your_article.wp_html --mode middle

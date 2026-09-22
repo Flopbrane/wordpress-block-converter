@@ -6,6 +6,8 @@
 #########################
 from __future__ import annotations
 
+from unittest.mock import patch
+
 from lint import lint_css, lint_file, lint_wp_html
 
 
@@ -16,6 +18,53 @@ def test_lint_reports_unclosed_paragraph_block() -> None:
     issues = lint_wp_html(load_file)
 
     assert any("wp:paragraph ブロックが閉じられていません" in issue.message for issue in issues)
+
+
+def test_lint_reports_group_block_comment_missing_end_slash() -> None:
+    """groupの閉じコメントで / が抜けた事故を検出するテストです。"""
+    load_file = (
+        "<!-- wp:group -->\n"
+        "<div>本文</div>\n"
+        "<!-- wp:group -->"
+    )
+
+    issues = lint_wp_html(load_file, mode="normal")
+
+    assert any("/ が抜けている可能性" in issue.message for issue in issues)
+    assert any("wp:group ブロックが閉じられていません" in issue.message for issue in issues)
+
+
+def test_lint_reports_malformed_angle_brackets() -> None:
+    """< や > の重複、タグの > 抜けを検出するテストです。"""
+    load_file = "<<p>本文</p>\n<p>本文</p>>\n<p class=\"note\""
+
+    issues = lint_wp_html(load_file, mode="normal")
+
+    assert any('"<<"' in issue.message for issue in issues)
+    assert any('">>"' in issue.message for issue in issues)
+    assert any('" が抜けている可能性' in issue.message for issue in issues)
+
+
+def test_lint_reports_malformed_block_comment() -> None:
+    """WPブロックコメントの > や --> 抜けを検出するテストです。"""
+    load_file = "<!-- wp:paragraph --\n<p>本文</p>\n<!-- /wp:paragraph -->"
+
+    issues = lint_wp_html(load_file, mode="normal")
+
+    assert any("--> がありません" in issue.message for issue in issues)
+
+
+def test_lint_reports_malformed_block_comment_attrs() -> None:
+    """WPブロックコメントのJSONパラメータ崩れを検出するテストです。"""
+    load_file = (
+        "<!-- wp:heading {level:3} -->\n"
+        '<h3 class="wp-block-heading">見出し</h3>\n'
+        "<!-- /wp:heading -->"
+    )
+
+    issues = lint_wp_html(load_file, mode="normal")
+
+    assert any("パラメータJSONが壊れています" in issue.message for issue in issues)
 
 
 def test_lint_reports_missing_paragraph_end_tag() -> None:
@@ -96,6 +145,36 @@ def test_lint_reports_html_tag_typo_inside_core_block() -> None:
     assert any("<span>" in issue.hint for issue in issues)
 
 
+def test_lint_reports_html_attribute_typo() -> None:
+    """HTML属性名のよくあるtypoを検出するテストです。"""
+    load_file = '<p clas="lead"><a herf="https://example.com">リンク</a></p>'
+
+    issues = lint_wp_html(load_file, mode="normal")
+
+    assert any("属性 clas はlint参照用JSONにない綴り" in issue.message for issue in issues)
+    assert any("class=" in issue.hint for issue in issues)
+    assert any("属性 herf はlint参照用JSONにない綴り" in issue.message for issue in issues)
+    assert any("href=" in issue.hint for issue in issues)
+
+
+def test_lint_uses_startup_reference_cache_without_rereading_json() -> None:
+    """lint実行時は起動時キャッシュを使い、参照JSONを読み直さないテストです。"""
+    with patch("pathlib.Path.read_text") as read_text:
+        issues = lint_wp_html('<p clas="lead">本文</p>', mode="normal")
+
+    read_text.assert_not_called()
+    assert any("属性 clas はlint参照用JSONにない綴り" in issue.message for issue in issues)
+
+
+def test_lint_accepts_reference_json_attribute_prefixes() -> None:
+    """参照JSONで許可した属性prefixはtypo警告しないテストです。"""
+    load_file = '<p data-note-id="1" aria-label="説明">本文</p>'
+
+    issues = lint_wp_html(load_file, mode="normal")
+
+    assert not any("lint参照用JSONにない綴り" in issue.message for issue in issues)
+
+
 def test_lint_reports_core_block_name_typo() -> None:
     """WPコアブロック名typoを検出するテストです。"""
     load_file = (
@@ -135,7 +214,7 @@ def test_lint_reports_dangerous_tags_attributes_and_urls() -> None:
         '<img src="data:image/png;base64,abc" alt="危険画像">\n'
     )
 
-    issues = lint_wp_html(load_file)
+    issues = lint_wp_html(load_file, mode="high-security")
 
     assert any("<script> はmiddle / high-security modeでは危険扱いです" in issue.message for issue in issues)
     assert any("<iframe> はmiddle / high-security modeでは危険扱いです" in issue.message for issue in issues)
@@ -157,7 +236,7 @@ def test_lint_reports_office_blocked_tags() -> None:
         '<select><option>項目</option></select>\n'
     )
 
-    issues = lint_wp_html(load_file)
+    issues = lint_wp_html(load_file, mode="high-security")
 
     for tag_name in ("object", "embed", "form", "input", "button", "textarea", "select"):
         assert any(
@@ -250,6 +329,22 @@ def test_lint_reports_block_comment_inside_paragraph_block() -> None:
     issues = lint_wp_html(load_file)
 
     assert any("paragraph ブロック内に wp:code ブロックコメント" in issue.message for issue in issues)
+
+
+def test_lint_reports_unstable_nested_core_block() -> None:
+    """入れ子が不安定になりやすいコアブロック組み合わせを警告するテストです。"""
+    load_file = (
+        "<!-- wp:heading -->\n"
+        '<h2 class="wp-block-heading">見出し</h2>\n'
+        "<!-- wp:paragraph -->\n"
+        "<p>本文</p>\n"
+        "<!-- /wp:paragraph -->\n"
+        "<!-- /wp:heading -->"
+    )
+
+    issues = lint_wp_html(load_file, mode="normal")
+
+    assert any("wp:heading ブロック内に wp:paragraph ブロック" in issue.message for issue in issues)
 
 
 def test_lint_reports_non_normal_unstable_core_blocks() -> None:

@@ -13,6 +13,7 @@ from tkinter import filedialog, messagebox
 from typing import cast
 
 from converters.wp_txt_converter import convert_wp_txt_to_gutenberg
+from dictionaries.hi_security_dict import DISPLAY_CONVERSION_MODES, NORMAL_MODE
 from lint import LintIssue as WpHtmlLintIssue
 from lint import lint_css, lint_wp_html
 from text_editor.linter import LintIssue, format_lint_issues, has_errors, lint_prewp_txt
@@ -29,6 +30,7 @@ class TextEditorFrame(tk.Frame):
         self.current_file_path: Path | None = Path(load_file_path) if load_file_path else None
         self._lint_tooltip: tk.Toplevel | None = None
         self._lint_tooltip_after_id: str | None = None
+        self._lint_mode_var = tk.StringVar(value=NORMAL_MODE)
         self.pack(fill="both", expand=True)
         self._create_widgets()
         self._create_menu()
@@ -36,13 +38,47 @@ class TextEditorFrame(tk.Frame):
             self.open_file(self.current_file_path)
 
     def _create_widgets(self) -> None:
-        self.text_area = tk.Text(self, wrap="word", undo=True)
+        toolbar = tk.Frame(self)
+        toolbar.pack(side="top", fill="x")
+        tk.Button(toolbar, text="文法チェック", command=self.run_lint_check).pack(
+            side="left",
+            padx=6,
+            pady=4,
+        )
+        tk.Label(toolbar, text="チェックモード").pack(side="left", padx=(6, 2))
+        tk.OptionMenu(toolbar, self._lint_mode_var, *DISPLAY_CONVERSION_MODES).pack(
+            side="left",
+            padx=(0, 8),
+            pady=4,
+        )
+        self.lint_status_label = tk.Label(
+            toolbar,
+            text="文法チェック: 未実行",
+            anchor="w",
+        )
+        self.lint_status_label.pack(side="left", fill="x", expand=True, padx=(0, 6))
+
+        editor_pane = tk.Frame(self)
+        editor_pane.pack(side="top", fill="both", expand=True)
+        self.text_area = tk.Text(editor_pane, wrap="word", undo=True)
         self.text_area.tag_configure("lint_error_line", background="#ffe5e5")
         self.text_area.tag_configure("lint_warning_line", background="#fff6cc")
-        scrollbar = tk.Scrollbar(self, command=self.text_area.yview)
+        scrollbar = tk.Scrollbar(editor_pane, command=self.text_area.yview)
         self.text_area.configure(yscrollcommand=scrollbar.set)
         self.text_area.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
+        issue_pane = tk.Frame(self)
+        issue_pane.pack(side="bottom", fill="x")
+        tk.Label(issue_pane, text="文法チェック結果", anchor="w").pack(fill="x")
+        self.lint_issue_listbox = tk.Listbox(issue_pane, height=4)
+        self.lint_issue_listbox.pack(side="left", fill="x", expand=True)
+        issue_scrollbar = tk.Scrollbar(issue_pane, command=self.lint_issue_listbox.yview)
+        issue_scrollbar.pack(side="right", fill="y")
+        self.lint_issue_listbox.configure(yscrollcommand=issue_scrollbar.set)
+        self.lint_issue_listbox.bind("<<ListboxSelect>>", self._jump_to_selected_lint_issue)
+        self.lint_issue_listbox.bind("<Motion>", self._show_lint_list_hover)
+        self.lint_issue_listbox.bind("<Leave>", self._hide_lint_tooltip)
+        self._last_lint_issues: list[AnyLintIssue] = []
         MarkerMenu(self.text_area)
 
     def _create_menu(self) -> None:
@@ -58,7 +94,7 @@ class TextEditorFrame(tk.Frame):
         file_menu.add_command(label="閉じる", command=root.destroy)
         menu_bar.add_cascade(label="ファイル", menu=file_menu)
         tool_menu = tk.Menu(menu_bar, tearoff=False)
-        tool_menu.add_command(label="lintチェック", command=self.run_lint_check)
+        tool_menu.add_command(label="文法チェック", command=self.run_lint_check)
         menu_bar.add_cascade(label="ツール", menu=tool_menu)
         root.configure(menu=menu_bar)
 
@@ -153,6 +189,7 @@ class TextEditorFrame(tk.Frame):
         save_file_path.write_text(save_file, encoding="utf-8")
         self.current_file_path = save_file_path
         self.winfo_toplevel().title(f"text_editor - {save_file_path}")
+        self._set_lint_status(issues)
         messagebox.showinfo("保存完了", f"保存しました。\n\n{save_file_path}", parent=self)
         return True
 
@@ -220,7 +257,7 @@ class TextEditorFrame(tk.Frame):
         if self._should_use_css_lint():
             issues = cast(list[AnyLintIssue], lint_css(load_file))
         elif self._should_use_wp_html_lint(load_file):
-            issues = cast(list[AnyLintIssue], lint_wp_html(load_file, mode="high-security"))
+            issues = cast(list[AnyLintIssue], lint_wp_html(load_file, mode=self._lint_mode_var.get()))
         else:
             issues = cast(list[AnyLintIssue], lint_prewp_txt(load_file))
         self._mark_lint_issues(issues)
@@ -240,6 +277,9 @@ class TextEditorFrame(tk.Frame):
 
     def _mark_lint_issues(self, issues: list[AnyLintIssue]) -> None:
         self._clear_lint_marks()
+        self._last_lint_issues = issues
+        self._refresh_lint_issue_list(issues)
+        self._set_lint_status(issues)
         for index, issue in enumerate(issues):
             line_number = self._issue_line_number(issue)
             line_start = f"{line_number}.0"
@@ -258,6 +298,9 @@ class TextEditorFrame(tk.Frame):
 
     def _clear_lint_marks(self) -> None:
         self._hide_lint_tooltip()
+        self._last_lint_issues = []
+        if hasattr(self, "lint_issue_listbox"):
+            self.lint_issue_listbox.delete(0, "end")
         for tag_name in self.text_area.tag_names():
             if tag_name.startswith("lint_issue_") or tag_name in {
                 "lint_error_line",
@@ -266,6 +309,55 @@ class TextEditorFrame(tk.Frame):
                 self.text_area.tag_delete(tag_name)
         self.text_area.tag_configure("lint_error_line", background="#ffe5e5")
         self.text_area.tag_configure("lint_warning_line", background="#fff6cc")
+        if hasattr(self, "lint_status_label"):
+            self.lint_status_label.configure(text="文法チェック: 未実行")
+
+    def _refresh_lint_issue_list(self, issues: list[AnyLintIssue]) -> None:
+        self.lint_issue_listbox.delete(0, "end")
+        if not issues:
+            self.lint_issue_listbox.insert("end", "問題は見つかりませんでした。")
+            return
+
+        for issue in issues:
+            label = "エラー" if self._issue_level(issue) == "error" else "警告"
+            self.lint_issue_listbox.insert(
+                "end",
+                f"{self._issue_line_number(issue)}行目 [{label}] {issue.message}",
+            )
+
+    def _set_lint_status(self, issues: list[AnyLintIssue]) -> None:
+        if not issues:
+            self.lint_status_label.configure(text="文法チェック: 問題は見つかりませんでした。")
+            return
+
+        error_count = sum(1 for issue in issues if self._issue_level(issue) == "error")
+        warning_count = len(issues) - error_count
+        self.lint_status_label.configure(
+            text=f"文法チェック: エラー {error_count}件 / 警告 {warning_count}件"
+        )
+
+    def _jump_to_selected_lint_issue(self, _event: tk.Event) -> None:
+        selection = self.lint_issue_listbox.curselection()
+        if not selection:
+            return
+
+        issue_index = selection[0]
+        if issue_index >= len(self._last_lint_issues):
+            return
+
+        line_number = self._issue_line_number(self._last_lint_issues[issue_index])
+        self.text_area.mark_set("insert", f"{line_number}.0")
+        self.text_area.see(f"{line_number}.0")
+        self.text_area.focus_set()
+
+    def _show_lint_list_hover(self, event: tk.Event) -> None:
+        issue_index = self.lint_issue_listbox.nearest(event.y)
+        if issue_index >= len(self._last_lint_issues):
+            self._hide_lint_tooltip()
+            return
+
+        issue = self._last_lint_issues[issue_index]
+        self._schedule_lint_tooltip(event, self._format_single_lint_issue(issue))
 
     def _schedule_lint_tooltip(self, event: tk.Event, text: str) -> None:
         self._hide_lint_tooltip()

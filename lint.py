@@ -13,13 +13,13 @@ from dataclasses import dataclass
 from difflib import get_close_matches
 from html.parser import HTMLParser
 from pathlib import Path
+from typing import Any
 
 try:
     from .dictionaries.hi_security_dict import (
         BLOCKED_ATTRIBUTES,
         BLOCKED_TAGS,
         BLOCKED_URL_PREFIXES,
-        HIGH_SECURITY_MODE,
         NORMAL_MODE,
         SAFE_CONVERSION_MODES,
         normalize_conversion_mode,
@@ -35,7 +35,6 @@ except ImportError:
         BLOCKED_ATTRIBUTES,
         BLOCKED_TAGS,
         BLOCKED_URL_PREFIXES,
-        HIGH_SECURITY_MODE,
         NORMAL_MODE,
         SAFE_CONVERSION_MODES,
         normalize_conversion_mode,
@@ -61,9 +60,21 @@ class LintIssue:
         return f"{self.line_number}行目: {self.message}\n  ヒント: {self.hint}"
 
 
+@dataclass(frozen=True)
+class LintReferenceCache:
+    """起動時に読み込むlint参照データのキャッシュです。"""
+
+    wordpress_core_blocks: set[str]
+    html_tags: set[str]
+    html_attributes: set[str]
+    allowed_attribute_prefixes: tuple[str, ...]
+
+
+LINT_REFERENCE_PATH: Path = Path(__file__).resolve().parent / "dictionaries" / "lint_reference.json"
 BLOCK_COMMENT_PATTERN: re.Pattern[str] = re.compile(
     r"<!--\s*(/)?wp:([a-zA-Z0-9_/-]+)(?:\s+(\{.*?\}))?\s*-->",
 )
+TAG_LIKE_START_PATTERN: re.Pattern[str] = re.compile(r"</?[A-Za-z!][^<>\n]*$")
 PARAGRAPH_START_PATTERN: re.Pattern[str] = re.compile(r"<p\b[^>]*>", re.IGNORECASE)
 PARAGRAPH_END_PATTERN: re.Pattern[str] = re.compile(r"</p>", re.IGNORECASE)
 PARAGRAPH_CONTENT_PATTERN: re.Pattern[str] = re.compile(
@@ -83,9 +94,20 @@ TABLE_FIGURE_PATTERN: re.Pattern[str] = re.compile(
 TABLE_TAG_PATTERN: re.Pattern[str] = re.compile(r"<table\b[^>]*>", re.IGNORECASE)
 
 RAW_HTML_BLOCK_NAMES: set[str] = {"html", "code"}
+STABLE_NESTED_BLOCK_PARENTS: set[str] = {
+    "buttons",
+    "column",
+    "columns",
+    "cover",
+    "details",
+    "group",
+    "list",
+    "media-text",
+    "quote",
+}
 VOID_TAGS: set[str] = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta"}
-KNOWN_WORDPRESS_CORE_BLOCKS: set[str] = set(WORDPRESS_CORE_BLOCKS)
-KNOWN_HTML_TAGS: set[str] = ALLOWED_HTML_TAGS | {
+DEFAULT_WORDPRESS_CORE_BLOCKS: set[str] = set(WORDPRESS_CORE_BLOCKS)
+DEFAULT_HTML_TAGS: set[str] = ALLOWED_HTML_TAGS | {
     "abbr",
     "address",
     "article",
@@ -161,6 +183,35 @@ KNOWN_HTML_TAGS: set[str] = ALLOWED_HTML_TAGS | {
     "var",
     "wbr",
 }
+DEFAULT_HTML_ATTRIBUTES: set[str] = {
+    "action",
+    "align",
+    "alt",
+    "class",
+    "colspan",
+    "controls",
+    "download",
+    "height",
+    "href",
+    "id",
+    "loading",
+    "media",
+    "name",
+    "onclick",
+    "onerror",
+    "onload",
+    "onmouseover",
+    "rel",
+    "rowspan",
+    "src",
+    "style",
+    "target",
+    "title",
+    "type",
+    "value",
+    "width",
+}
+DEFAULT_ALLOWED_ATTRIBUTE_PREFIXES: tuple[str, ...] = ("aria-", "data-")
 COMMON_HTML_TAG_TYPOS: dict[str, str] = {
     "artcle": "article",
     "blcokquote": "blockquote",
@@ -192,6 +243,86 @@ COMMON_HTML_TAG_TYPOS: dict[str, str] = {
     "texarea": "textarea",
     "tabel": "table",
 }
+COMMON_HTML_ATTRIBUTE_TYPOS: dict[str, str] = {
+    "calss": "class",
+    "clas": "class",
+    "herf": "href",
+    "hrfe": "href",
+    "sorce": "src",
+    "scr": "src",
+    "sryle": "style",
+    "stlye": "style",
+    "styel": "style",
+    "taget": "target",
+    "taret": "target",
+    "titel": "title",
+}
+
+
+def _load_lint_reference() -> dict[str, Any]:
+    try:
+        data = json.loads(LINT_REFERENCE_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return data
+
+
+def _reference_list(
+    reference_data: dict[str, Any],
+    key: str,
+    fallback: list[str],
+) -> list[str]:
+    values = reference_data.get(key)
+    if not isinstance(values, list):
+        return fallback
+
+    result = [value.strip().lower() for value in values if isinstance(value, str) and value.strip()]
+    if not result:
+        return fallback
+    return result
+
+
+def _reference_set(
+    reference_data: dict[str, Any],
+    key: str,
+    fallback: set[str],
+) -> set[str]:
+    return set(_reference_list(reference_data, key, sorted(fallback)))
+
+
+def _build_lint_reference_cache() -> LintReferenceCache:
+    reference_data = _load_lint_reference()
+    return LintReferenceCache(
+        wordpress_core_blocks=_reference_set(
+            reference_data,
+            "wordpress_core_blocks",
+            DEFAULT_WORDPRESS_CORE_BLOCKS,
+        ),
+        html_tags=_reference_set(reference_data, "html_tags", DEFAULT_HTML_TAGS),
+        html_attributes=_reference_set(
+            reference_data,
+            "html_attributes",
+            DEFAULT_HTML_ATTRIBUTES,
+        ),
+        allowed_attribute_prefixes=tuple(
+            _reference_list(
+                reference_data,
+                "allowed_attribute_prefixes",
+                list(DEFAULT_ALLOWED_ATTRIBUTE_PREFIXES),
+            )
+        ),
+    )
+
+
+LINT_REFERENCE_CACHE: LintReferenceCache = _build_lint_reference_cache()
+KNOWN_WORDPRESS_CORE_BLOCKS: set[str] = LINT_REFERENCE_CACHE.wordpress_core_blocks
+KNOWN_HTML_TAGS: set[str] = LINT_REFERENCE_CACHE.html_tags
+KNOWN_HTML_ATTRIBUTES: set[str] = LINT_REFERENCE_CACHE.html_attributes
+ALLOWED_HTML_ATTRIBUTE_PREFIXES: tuple[str, ...] = (
+    LINT_REFERENCE_CACHE.allowed_attribute_prefixes
+)
 INPUT_TYPE_AUTO = "auto"
 INPUT_TYPE_WP_HTML = "wp-html"
 INPUT_TYPE_CSS = "css"
@@ -290,10 +421,11 @@ CSS_RESTRICTION_RULES: tuple[tuple[re.Pattern[str], str, str], ...] = (
 )
 
 
-def lint_wp_html(load_file: str, mode: str = HIGH_SECURITY_MODE) -> list[LintIssue]:
+def lint_wp_html(load_file: str, mode: str = NORMAL_MODE) -> list[LintIssue]:
     """WordPress HTML文字列を検査して、問題一覧を返します。"""
     normalized_mode = normalize_conversion_mode(mode)
     issues: list[LintIssue] = []
+    issues.extend(_lint_malformed_markup(load_file))
     issues.extend(_lint_block_comments(load_file, normalized_mode))
     issues.extend(_lint_html_tags(load_file, normalized_mode))
     return sorted(issues, key=lambda issue: issue.line_number)
@@ -309,7 +441,7 @@ def lint_css(load_file: str) -> list[LintIssue]:
 
 def lint_file(
     load_file_path: str | Path,
-    mode: str = HIGH_SECURITY_MODE,
+    mode: str = NORMAL_MODE,
     input_type: str = INPUT_TYPE_AUTO,
 ) -> list[LintIssue]:
     """ファイルを読み込んで、入力種別に応じたlintを実行します。"""
@@ -330,7 +462,7 @@ def main() -> None:
     parser.add_argument(
         "--mode",
         choices=(NORMAL_MODE, *SAFE_CONVERSION_MODES),
-        default=HIGH_SECURITY_MODE,
+        default=NORMAL_MODE,
         help="想定する変換モードです。normalでは非normal向け表示警告を出しません。",
     )
     parser.add_argument(
@@ -362,6 +494,7 @@ def _lint_block_comments(load_file: str, mode: str) -> list[LintIssue]:
             is_end_comment = bool(block_match.group(1))
             block_name = _normalize_block_comment_name(block_match.group(2))
             block_attrs = block_match.group(3) or ""
+            _lint_block_attrs_json(issues, block_name, block_attrs, line_number)
             _lint_unknown_core_block_comment(
                 issues,
                 block_name,
@@ -382,6 +515,13 @@ def _lint_block_comments(load_file: str, mode: str) -> list[LintIssue]:
                 is_end_comment,
                 line_number,
             )
+            _lint_unstable_nested_block_comment(
+                issues,
+                block_stack,
+                block_name,
+                is_end_comment,
+                line_number,
+            )
             if should_lint_non_normal and not is_end_comment:
                 _lint_non_normal_core_block(issues, block_name, line_number)
 
@@ -389,6 +529,7 @@ def _lint_block_comments(load_file: str, mode: str) -> list[LintIssue]:
                 _close_block_comment(issues, block_stack, block_name, line_number)
                 continue
 
+            _lint_possible_missing_block_end_slash(issues, block_stack, block_name, line_number)
             block_stack.append({
                 "name": block_name,
                 "attrs": block_attrs,
@@ -426,11 +567,88 @@ def _lint_non_normal_core_block(
     ))
 
 
+def _lint_malformed_markup(load_file: str) -> list[LintIssue]:
+    issues: list[LintIssue] = []
+    for line_number, line in enumerate(load_file.splitlines(), start=1):
+        if "<<" in line:
+            issues.append(LintIssue(
+                line_number,
+                'HTMLタグ付近に "<<" があります。',
+                '"<" が重複していないか確認してください。',
+            ))
+        if ">>" in line:
+            issues.append(LintIssue(
+                line_number,
+                'HTMLタグ付近に ">>" があります。',
+                '">" が重複していないか確認してください。',
+            ))
+        if "<!--" in line and "wp:" in line and "-->" not in line:
+            issues.append(LintIssue(
+                line_number,
+                "WordPressブロックコメントの --> がありません。",
+                "<!-- wp:paragraph --> のようにコメントを閉じてください。",
+            ))
+        if "<!--" in line and "wp:" in line and "-->" in line:
+            line_issues_before = len(issues)
+            for comment_match in re.finditer(r"<!--.*?-->", line):
+                comment_text = comment_match.group(0)
+                if "wp:" in comment_text and not BLOCK_COMMENT_PATTERN.fullmatch(comment_text):
+                    issues.append(LintIssue(
+                        line_number,
+                        "WordPressブロックコメントの形が崩れている可能性があります。",
+                        "<!-- wp:block-name --> または <!-- /wp:block-name --> の形を確認してください。",
+                    ))
+            if len(issues) > line_issues_before:
+                continue
+        if _has_unclosed_tag_like_text(line):
+            issues.append(LintIssue(
+                line_number,
+                'HTMLタグの ">" が抜けている可能性があります。',
+                "<p>本文</p> のように、開始タグ・終了タグが閉じているか確認してください。",
+            ))
+    return issues
+
+
+def _has_unclosed_tag_like_text(line: str) -> bool:
+    for less_than_index, char in enumerate(line):
+        if char != "<":
+            continue
+        rest = line[less_than_index:]
+        if rest.startswith("<!--"):
+            continue
+        next_less_than = rest.find("<", 1)
+        next_greater_than = rest.find(">", 1)
+        if next_greater_than != -1 and (next_less_than == -1 or next_greater_than < next_less_than):
+            continue
+        if TAG_LIKE_START_PATTERN.match(rest):
+            return True
+    return False
+
+
 def _normalize_block_comment_name(block_name: str) -> str:
     clean_block_name = block_name.strip().lower()
     if clean_block_name.startswith("core/"):
         return clean_block_name.removeprefix("core/")
     return clean_block_name
+
+
+def _lint_block_attrs_json(
+    issues: list[LintIssue],
+    block_name: str,
+    block_attrs: str,
+    line_number: int,
+) -> None:
+    if not block_attrs:
+        return
+
+    try:
+        json.loads(block_attrs)
+    except json.JSONDecodeError:
+        issues.append(LintIssue(
+            line_number,
+            f"wp:{block_name} ブロックコメントのパラメータJSONが壊れています。",
+            '例: <!-- wp:heading {"level":3} --> のように、キーと文字列は " " で囲んでください。',
+        ))
 
 
 def _lint_unknown_core_block_comment(
@@ -473,6 +691,49 @@ def _lint_block_comment_inside_paragraph(
         line_number,
         f"paragraph ブロック内に wp:{block_name} ブロックコメントがあります。",
         "独立ブロックは paragraph の外に出し、paragraph / code / paragraph のように兄弟ブロックとして並べてください。",
+    ))
+
+
+def _lint_unstable_nested_block_comment(
+    issues: list[LintIssue],
+    block_stack: list[dict[str, str | int]],
+    block_name: str,
+    is_end_comment: bool,
+    line_number: int,
+) -> None:
+    if is_end_comment or not block_stack:
+        return
+
+    parent_block_name = str(block_stack[-1]["name"])
+    if parent_block_name in STABLE_NESTED_BLOCK_PARENTS:
+        return
+    if parent_block_name in {"html", "code", "paragraph"}:
+        return
+
+    issues.append(LintIssue(
+        line_number,
+        f"wp:{parent_block_name} ブロック内に wp:{block_name} ブロックがあります。",
+        "入れ子にできるブロックかWordPress上で確認し、不安定な場合は兄弟ブロックとして分けてください。",
+    ))
+
+
+def _lint_possible_missing_block_end_slash(
+    issues: list[LintIssue],
+    block_stack: list[dict[str, str | int]],
+    block_name: str,
+    line_number: int,
+) -> None:
+    if not block_stack:
+        return
+
+    current_block_name = str(block_stack[-1]["name"])
+    if current_block_name != block_name:
+        return
+
+    issues.append(LintIssue(
+        line_number,
+        f"wp:{block_name} の閉じコメントで / が抜けている可能性があります。",
+        f"閉じる場合は <!-- /wp:{block_name} --> と書いてください。",
     ))
 
 
@@ -757,6 +1018,12 @@ def _find_closest_word(word: str, choices: set[str]) -> str | None:
     return matches[0]
 
 
+def _is_known_html_attribute(attr_name: str) -> bool:
+    if attr_name in KNOWN_HTML_ATTRIBUTES:
+        return True
+    return any(attr_name.startswith(prefix) for prefix in ALLOWED_HTML_ATTRIBUTE_PREFIXES)
+
+
 class WpHtmlTagLintParser(HTMLParser):
     """HTMLタグの閉じ忘れと属性不足を確認するHTMLParserです。"""
 
@@ -773,6 +1040,7 @@ class WpHtmlTagLintParser(HTMLParser):
 
         self._lint_unknown_html_tag(clean_tag, line_number)
         self._lint_dangerous_tag(clean_tag, line_number)
+        self._lint_common_attribute_typos(clean_tag, attrs_dict, line_number)
         self._lint_dangerous_attributes(clean_tag, attrs_dict, line_number)
         self._lint_display_unstable_attributes(clean_tag, attrs_dict, line_number)
 
@@ -791,6 +1059,7 @@ class WpHtmlTagLintParser(HTMLParser):
 
         self._lint_unknown_html_tag(clean_tag, line_number)
         self._lint_dangerous_tag(clean_tag, line_number)
+        self._lint_common_attribute_typos(clean_tag, attrs_dict, line_number)
         self._lint_dangerous_attributes(clean_tag, attrs_dict, line_number)
         self._lint_display_unstable_attributes(clean_tag, attrs_dict, line_number)
 
@@ -870,6 +1139,30 @@ class WpHtmlTagLintParser(HTMLParser):
             f"<{tag}> はmiddle / high-security modeでは危険扱いです。",
             f"<{tag}> を削除するか、安全なGutenberg標準ブロックへ置き換えてください。",
         ))
+
+    def _lint_common_attribute_typos(
+        self,
+        tag: str,
+        attrs: dict[str, str],
+        line_number: int,
+    ) -> None:
+        for attr_name, attr_value in attrs.items():
+            if _is_known_html_attribute(attr_name):
+                continue
+
+            suggestion = COMMON_HTML_ATTRIBUTE_TYPOS.get(attr_name)
+            if suggestion is None:
+                suggestion = _find_closest_word(attr_name, KNOWN_HTML_ATTRIBUTES)
+
+            hint = "lint参照用JSONの html_attributes にある綴りか、必要なら参照JSONへ追加してください。"
+            if suggestion:
+                hint = f'{suggestion}="{attr_value}" のように、属性名を確認してください。'
+
+            self.issues.append(LintIssue(
+                line_number,
+                f"<{tag}> タグの属性 {attr_name} はlint参照用JSONにない綴りです。",
+                hint,
+            ))
 
     def _lint_dangerous_attributes(
         self,

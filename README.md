@@ -360,7 +360,7 @@ python .\lint.py .\style.txt --input-type css
 python .\lint.py .\your_article.html --input-type wp-html
 ```
 
-Use `--mode` when checking output for office WordPress or high-security environments. The default lint mode is `high-security`.
+Use `--mode` when checking output for office WordPress or high-security environments. The default lint mode is `normal`.
 
 ```powershell
 python .\lint.py .\your_article.wp_html --mode middle
