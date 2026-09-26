@@ -334,10 +334,33 @@ HTML_ATTRIBUTE_PATTERN: re.Pattern[str] = re.compile(
     r'([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*["\']([^"\']*)["\']'
 )
 HTML_SPACER_PATTERN: re.Pattern[str] = re.compile(r"<hr\b[^>]*>", re.IGNORECASE)
+HTML_EXISTING_CUSTOM_HTML_BLOCK_PATTERN: re.Pattern[str] = re.compile(
+    r"<!--\s*wp:html\s*-->.*?<!--\s*/wp:html\s*-->",
+    re.IGNORECASE | re.DOTALL,
+)
+HTML_WORDPRESS_BLOCK_COMMENT_PATTERN: re.Pattern[str] = re.compile(
+    r"<!--\s*/?wp:(?!html\b)[a-zA-Z0-9_/-]+(?:\s+\{.*?\})?\s*-->",
+    re.IGNORECASE | re.DOTALL,
+)
 HTML_SHORTCODE_PATTERN: re.Pattern[str] = re.compile(r"^\s*\[[A-Za-z0-9_-]+(?:\s+[^\]]*)?\]\s*$")
 EMBED_URL_PATTERN: re.Pattern[str] = re.compile(r"^https?://[^\s<]+$", re.IGNORECASE)
 HTML_BR_PATTERN: re.Pattern[str] = re.compile(r"<br\s*/?>", re.IGNORECASE)
 HTML_TAG_PATTERN: re.Pattern[str] = re.compile(r"<[^>]+>")
+
+HTML_DIV_HTML_BLOCK_STYLE_KEYWORDS: tuple[str, ...] = (
+    "border",
+    "padding",
+    "margin",
+    "background",
+    "background-color",
+    "max-width",
+    "min-width",
+    "width",
+    "border-radius",
+    "display",
+    "grid-",
+    "flex-",
+)
 
 DIRECT_URL_RULES: dict[str, dict[str, object]] = {
     "image": {

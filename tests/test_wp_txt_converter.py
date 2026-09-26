@@ -372,6 +372,25 @@ def test_convert_wp_txt_box_wraps_text_in_styled_html_block() -> None:
     assert "<!-- /wp:html -->" in save_file
 
 
+def test_convert_wp_txt_box_keeps_inner_text_as_plain_html_without_wp_comments() -> None:
+    """囲い込み内はブロックコメントを混ぜず、本文HTMLだけで完結させるテストです。"""
+    load_file = (
+        "[囲い込み]\n"
+        "最初の段落です。\n\n"
+        "・確認1\n"
+        "・確認2\n"
+        "[/囲い込み]"
+    )
+
+    save_file = convert_wp_txt_to_gutenberg(load_file)
+
+    assert save_file.count("<!-- wp:html -->") == 1
+    assert save_file.count("<!-- /wp:html -->") == 1
+    assert "<!-- wp:paragraph -->" not in save_file
+    assert "<!-- wp:list -->" not in save_file
+    assert "最初の段落です。<br><br>・確認1<br>・確認2" in save_file
+
+
 def test_convert_wp_txt_html_exec_block_keeps_raw_html() -> None:
     """[HTML]は実行HTMLとしてwp:htmlへ出力するテストです。"""
     load_file = (
@@ -415,6 +434,25 @@ def test_convert_wp_txt_notice_and_supplement_blocks() -> None:
     assert "<strong>補足</strong><br>必要に応じて使います。" in save_file
     assert "[注意]" not in save_file
     assert "[補足]" not in save_file
+
+
+def test_convert_wp_txt_notice_keeps_multiline_text_inside_single_html_block() -> None:
+    """注意枠内の段落・箇条書き風テキストを1つのHTMLブロック内に収めるテストです。"""
+    load_file = (
+        "[注意]\n"
+        "保存前に確認してください。\n\n"
+        "1. HTMLブロックを閉じる\n"
+        "2. 下書き保存する\n"
+        "[/注意]"
+    )
+
+    save_file = convert_wp_txt_to_gutenberg(load_file)
+
+    assert save_file.count("<!-- wp:html -->") == 1
+    assert save_file.count("<!-- /wp:html -->") == 1
+    assert "<!-- wp:paragraph -->" not in save_file
+    assert "<!-- wp:list -->" not in save_file
+    assert "保存前に確認してください。<br><br>1. HTMLブロックを閉じる<br>2. 下書き保存する" in save_file
 
 
 def test_convert_wp_txt_steps_block_to_ordered_list() -> None:

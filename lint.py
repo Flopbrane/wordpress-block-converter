@@ -27,6 +27,7 @@ try:
     from .dictionaries.html_dict import (
         ALLOWED_HTML_TAGS,
         DISPLAY_UNSTABLE_CLASS_KEYWORDS,
+        HTML_DIV_HTML_BLOCK_STYLE_KEYWORDS,
         NON_NORMAL_UNSTABLE_CORE_BLOCKS,
         WORDPRESS_CORE_BLOCKS,
     )
@@ -42,6 +43,7 @@ except ImportError:
     from dictionaries.html_dict import (
         ALLOWED_HTML_TAGS,
         DISPLAY_UNSTABLE_CLASS_KEYWORDS,
+        HTML_DIV_HTML_BLOCK_STYLE_KEYWORDS,
         NON_NORMAL_UNSTABLE_CORE_BLOCKS,
         WORDPRESS_CORE_BLOCKS,
     )
@@ -54,10 +56,12 @@ class LintIssue:
     line_number: int
     message: str
     hint: str
+    level: str = "error"
 
     def format(self) -> str:
         """CLI表示用の文字列にします。"""
-        return f"{self.line_number}行目: {self.message}\n  ヒント: {self.hint}"
+        label = "エラー" if self.level == "error" else "警告"
+        return f"{self.line_number}行目 [{label}]: {self.message}\n  ヒント: {self.hint}"
 
 
 @dataclass(frozen=True)
@@ -564,6 +568,7 @@ def _lint_non_normal_core_block(
         line_number,
         block_rule["message"],
         block_rule["hint"],
+        level="warning",
     ))
 
 
@@ -835,6 +840,7 @@ def _lint_paragraph_block(
             _find_issue_line_number(content, EMPTY_PARAGRAPH_PATTERN, line_number),
             "paragraph ブロックが空です。",
             "空の paragraph ブロックは削除するか、本文を入れてください。",
+            level="warning",
         ))
     else:
         _lint_paragraph_inner_blank_lines(issues, content, line_number)
@@ -861,6 +867,7 @@ def _lint_paragraph_inner_blank_lines(
             issue_line_number,
             "paragraph ブロック内の <p> に空行があります。",
             "<p> の中に人間向けの空行を入れず、<br><br> を詰めるか、別の paragraph ブロックへ分けてください。",
+            level="warning",
         ))
 
 
@@ -958,15 +965,71 @@ def _resolve_lint_input_type(load_file_path: Path, load_file: str, input_type: s
 
 
 def _lint_css_braces(load_file: str) -> list[LintIssue]:
-    css_without_comments = CSS_COMMENT_PATTERN.sub("", load_file)
-    if css_without_comments.count("{") == css_without_comments.count("}"):
-        return []
+    issues: list[LintIssue] = []
+    open_brace_lines: list[int] = []
+    in_block_comment = False
+    block_comment_start_line = 1
 
-    return [LintIssue(
-        1,
-        "CSSの波括弧 { } の数が一致していません。",
-        "閉じ忘れや余分な } があると、それ以降のCSSがまとめて効かなくなることがあります。",
-    )]
+    for line_number, raw_line in enumerate(load_file.splitlines(), start=1):
+        if not in_block_comment and "/*" in raw_line:
+            block_comment_start_line = line_number
+        line, in_block_comment = _remove_css_comments_from_line(raw_line, in_block_comment)
+        if in_block_comment and "/*" in raw_line:
+            block_comment_start_line = line_number
+
+        for char in _remove_css_strings(line):
+            if char == "{":
+                open_brace_lines.append(line_number)
+            elif char == "}":
+                if not open_brace_lines:
+                    issues.append(LintIssue(
+                        line_number,
+                        "CSSに対応する開始 { がない波括弧 } があります。",
+                        "余分な } を削除するか、直前のセレクタと { } の対応を確認してください。",
+                    ))
+                    continue
+                open_brace_lines.pop()
+
+    if in_block_comment:
+        issues.append(LintIssue(
+            block_comment_start_line,
+            "CSSコメント /* ... */ が閉じられていません。",
+            "*/ を追加してください。コメント閉じ忘れは後続CSSをまとめて無効化することがあります。",
+        ))
+
+    for line_number in open_brace_lines:
+        issues.append(LintIssue(
+            line_number,
+            "CSSの波括弧 { が閉じられていません。",
+            "} を追加してください。閉じ忘れがあると、それ以降のCSSがまとめて効かなくなることがあります。",
+        ))
+
+    return issues
+
+
+def _remove_css_strings(line: str) -> str:
+    output = ""
+    quote_char = ""
+    is_escaped = False
+    for char in line:
+        if quote_char:
+            if is_escaped:
+                is_escaped = False
+                continue
+            if char == "\\":
+                is_escaped = True
+                continue
+            if char == quote_char:
+                quote_char = ""
+            continue
+
+        if char in {'"', "'"}:
+            quote_char = char
+            continue
+
+        output = f"{output}{char}"
+
+    return output
 
 
 def _lint_css_restrictions(load_file: str) -> list[LintIssue]:
@@ -980,7 +1043,7 @@ def _lint_css_restrictions(load_file: str) -> list[LintIssue]:
         for pattern, message, hint in CSS_RESTRICTION_RULES:
             if not pattern.search(line):
                 continue
-            issues.append(LintIssue(line_number, message, hint))
+            issues.append(LintIssue(line_number, message, hint, level="warning"))
 
     return issues
 
@@ -1138,6 +1201,7 @@ class WpHtmlTagLintParser(HTMLParser):
             line_number,
             f"<{tag}> はmiddle / high-security modeでは危険扱いです。",
             f"<{tag}> を削除するか、安全なGutenberg標準ブロックへ置き換えてください。",
+            level="warning",
         ))
 
     def _lint_common_attribute_typos(
@@ -1162,6 +1226,7 @@ class WpHtmlTagLintParser(HTMLParser):
                 line_number,
                 f"<{tag}> タグの属性 {attr_name} はlint参照用JSONにない綴りです。",
                 hint,
+                level="warning",
             ))
 
     def _lint_dangerous_attributes(
@@ -1179,6 +1244,7 @@ class WpHtmlTagLintParser(HTMLParser):
                     line_number,
                     f"<{tag}> タグに危険または崩れやすい属性 {attr_name} があります。",
                     f'{attr_name} を削除してください。',
+                    level="warning",
                 ))
 
             if attr_name in {"href", "src"} and _starts_with_blocked_url(attr_value):
@@ -1186,6 +1252,7 @@ class WpHtmlTagLintParser(HTMLParser):
                     line_number,
                     f"<{tag}> タグに危険なURLがあります。",
                     "javascript:、data:、vbscript: は使わないでください。",
+                    level="warning",
                 ))
 
     def _lint_display_unstable_attributes(
@@ -1211,11 +1278,22 @@ class WpHtmlTagLintParser(HTMLParser):
                     line_number,
                     f"<{tag}> タグの class に表示が不安定になりやすい指定 '{keyword}' があります。",
                     f"{reason} エディタ側ではこの警告文をホバー表示のツールチップとして使えます。",
+                    level="warning",
                 ))
 
         style_value = attrs.get("style", "").lower()
         if not style_value:
             return
+
+        if tag == "div" and any(
+            keyword in style_value for keyword in HTML_DIV_HTML_BLOCK_STYLE_KEYWORDS
+        ):
+            self.issues.append(LintIssue(
+                line_number,
+                "<div> タグの style に囲み記事・レイアウト向け指定があります。",
+                "このdivは変換時に親子ごと wp:html 保護対象です。事業所WPで保存後の表示を確認してください。",
+                level="warning",
+            ))
 
         for css_text, reason in (
             ("display:none", "要素が表示されません。"),
@@ -1237,6 +1315,7 @@ class WpHtmlTagLintParser(HTMLParser):
                 line_number,
                 f"<{tag}> タグの style に表示・操作を制限する指定があります。",
                 f"{reason} middle / high-security modeではstyleを使わず標準ブロックへ寄せてください。",
+                level="warning",
             ))
             return
 
@@ -1246,6 +1325,7 @@ class WpHtmlTagLintParser(HTMLParser):
                 line_number,
                 "<a> タグに href がありません。",
                 '<a href="https://example.com">リンク</a> の形にしてください。',
+                level="warning",
             ))
 
         if attrs.get("target") == "_blank" and "noopener" not in attrs.get("rel", "").split():
@@ -1253,6 +1333,7 @@ class WpHtmlTagLintParser(HTMLParser):
                 line_number,
                 'target="_blank" がありますが rel="noopener" がありません。',
                 'rel="noopener" を追加してください。',
+                level="warning",
             ))
 
     def _lint_image(self, attrs: dict[str, str], line_number: int) -> None:
@@ -1261,12 +1342,14 @@ class WpHtmlTagLintParser(HTMLParser):
                 line_number,
                 "<img> タグに src がありません。",
                 '<img src="画像URL" alt="画像説明"> の形にしてください。',
+                level="warning",
             ))
         if "alt" not in attrs:
             self.issues.append(LintIssue(
                 line_number,
                 "<img> タグに alt がありません。",
                 'alt="画像説明" を追加してください。',
+                level="warning",
             ))
 
 

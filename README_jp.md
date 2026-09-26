@@ -375,6 +375,15 @@ WordPress HTMLでは主に次を確認します。
 - 非normalモードでは、`core/embed`、`core/html`、`core/shortcode`、`core/video`、`core/audio`、`core/file`、`core/gallery`、`core/media-text`、`core/columns`、`core/buttons`、`core/spacer` など、表示が無効化・不安定化しやすいコアブロック
 - 非normalモードでは、`hidden-post`、`samearea-otheroffice`、`blog-officelist`、`modal`、`swiper`、`visually-hidden`、`screen-reader`、`sr-only` など、解析済みCSSで非表示・表示不安定になりやすいclass
 - 非normalモードでは、`display:none`、`visibility:hidden`、`opacity:0`、`pointer-events:none`、`user-select:none`、`overflow:hidden` など、表示や操作を制限するインラインstyle
+- 非normalモードでは、`wp:html` として親子ごと保護した方がよい囲み記事用の `div`。対象は `border`、`padding`、`background-color`、`max-width`、`border-radius`、`display`、`grid-*`、`flex-*` などの装飾・レイアウトstyleです。
+
+事業所WP向けの一時 warning:
+
+- HTML入力に囲み記事用のstyle付き `div` がある場合、変換器は親 `div` と子要素をまとめて1つの Custom HTML ブロックとして保持します。
+- この場合、中の `p`、`ul`、`ol`、入れ子 `div` は個別のGutenbergブロックへ分解しません。
+- 保護対象の囲み枠内に `wp:paragraph` や `wp:list` などのGutenbergブロックコメントが混ざっている場合は、コメントだけを取り除き、通常HTMLだけを `wp:html` 内に残します。
+- 既に `wp:html` 済みの入力は、さらに `wp:html` で二重に包みません。
+- 事業所WPで保存後に追加規制が見つかった場合は、保存後HTMLを実働回帰サンプルとして追加してください。
 
 CSSファイルでは主に次を確認します。
 
@@ -382,9 +391,10 @@ CSSファイルでは主に次を確認します。
 - `pointer-events:none`、`user-select:none`、操作不可カーソル、スクロールバー非表示など、操作を制限する指定
 - `overflow:hidden`、`clip`、`clip-path`、`position:fixed`、大きすぎる `z-index` など、WordPressやスマホ表示で崩れやすい指定
 - `@import`、`url(https://...)` など、外部CSS・画像・フォントへの依存
-- CSSの波括弧不一致。`}` の閉じ忘れがあると、後続のCSSがまとめて効かなくなることがあります。
+- CSSの波括弧問題。`}` の閉じ忘れ、余分な `}`、`/* ... */` コメントの閉じ忘れがあると、後続のCSSがまとめて効かなくなることがあります。
 
-問題がある場合は、行番号、問題内容、修正ヒントを表示します。
+問題がある場合は、行番号、重要度、問題内容、修正ヒントを表示します。
+WordPress保存時に崩れやすい文法破損はエラー、制限環境での表示リスクは警告として扱います。
 
 `text_editor` で `ツール > lintチェック` を実行すると、問題行がハイライトされます。ハイライト行にマウスを乗せると、警告内容と修正ヒントがホバー表示されます。`.css` を開いている場合はCSS lint、`.wp_html` / `.html` を開いている場合や、本文に `<!-- wp:` が含まれる場合はWordPress HTML lintとして確認します。
 

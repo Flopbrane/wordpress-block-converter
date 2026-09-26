@@ -398,6 +398,15 @@ For WordPress HTML, it checks:
 - In non-normal modes, unstable core blocks such as `core/embed`, `core/html`, `core/shortcode`, `core/video`, `core/audio`, `core/file`, `core/gallery`, `core/media-text`, `core/columns`, `core/buttons`, and `core/spacer`
 - In non-normal modes, classes found in the CSS audit as hidden or unstable, such as `hidden-post`, `samearea-otheroffice`, `blog-officelist`, `modal`, `swiper`, `visually-hidden`, `screen-reader`, and `sr-only`
 - In non-normal modes, inline CSS that restricts display or interaction, such as `display:none`, `visibility:hidden`, `opacity:0`, `pointer-events:none`, `user-select:none`, and `overflow:hidden`
+- In non-normal modes, styled `div` frame articles that should be kept as one `wp:html` block. This includes decoration and layout styles such as `border`, `padding`, `background-color`, `max-width`, `border-radius`, `display`, `grid-*`, and `flex-*`.
+
+Temporary office WordPress warning:
+
+- When HTML input contains a styled frame `div`, the converter keeps the whole parent `div` and its children as one Custom HTML block.
+- It does not split the inner `p`, `ul`, `ol`, or nested `div` into separate Gutenberg blocks.
+- If Gutenberg block comments such as `wp:paragraph` or `wp:list` are found inside a protected frame, only those comments are removed so that the `wp:html` block contains ordinary HTML only.
+- Existing `wp:html` input is not wrapped in another `wp:html` block.
+- After saving in office WordPress, keep the saved HTML as a real regression sample if more restrictions appear.
 
 For CSS files, it checks:
 
@@ -405,9 +414,10 @@ For CSS files, it checks:
 - Interaction restrictions such as `pointer-events:none`, `user-select:none`, disabled cursors, and hidden scrollbars
 - Layout rules that often break in WordPress or mobile views, such as `overflow:hidden`, `clip`, `clip-path`, `position:fixed`, and very large `z-index`
 - External dependencies such as `@import` and `url(https://...)`
-- Unmatched CSS braces, because a missing `}` can disable later rules
+- CSS brace problems, including a missing `}`, an extra `}`, and an unclosed `/* ... */` comment, because these can disable later rules
 
-When issues are found, it prints the line number, problem, and fix hint.
+When issues are found, it prints the line number, severity, problem, and fix hint.
+Syntax breakage that can corrupt WordPress saves is reported as an error. Restricted-environment display risk is reported as a warning.
 
 In `text_editor`, use `Tools > lintチェック` to highlight issue lines. Hover over a highlighted line to see the warning and fix hint. Files ending in `.css` are checked with the CSS linter. Files ending in `.wp_html`, `.html`, or `.htm`, and text containing `<!-- wp:`, are checked with the WordPress HTML linter.
 

@@ -17,7 +17,10 @@ def test_lint_reports_unclosed_paragraph_block() -> None:
 
     issues = lint_wp_html(load_file)
 
-    assert any("wp:paragraph ブロックが閉じられていません" in issue.message for issue in issues)
+    assert any(
+        issue.level == "error" and "wp:paragraph ブロックが閉じられていません" in issue.message
+        for issue in issues
+    )
 
 
 def test_lint_reports_group_block_comment_missing_end_slash() -> None:
@@ -30,8 +33,26 @@ def test_lint_reports_group_block_comment_missing_end_slash() -> None:
 
     issues = lint_wp_html(load_file, mode="normal")
 
-    assert any("/ が抜けている可能性" in issue.message for issue in issues)
+    assert any(
+        issue.level == "error" and "/ が抜けている可能性" in issue.message
+        for issue in issues
+    )
     assert any("wp:group ブロックが閉じられていません" in issue.message for issue in issues)
+
+
+def test_lint_reports_unclosed_html_block_as_error() -> None:
+    """HTMLブロックの閉じ忘れは保存前に止めるerrorとして検出します。"""
+    load_file = (
+        "<!-- wp:html -->\n"
+        "<div>囲み記事</div>\n"
+    )
+
+    issues = lint_wp_html(load_file)
+
+    assert any(
+        issue.level == "error" and "wp:html ブロックが閉じられていません" in issue.message
+        for issue in issues
+    )
 
 
 def test_lint_reports_malformed_angle_brackets() -> None:
@@ -406,6 +427,33 @@ def test_lint_reports_display_unstable_classes_and_styles() -> None:
     assert any("ホバー表示のツールチップ" in issue.hint for issue in issues)
 
 
+def test_lint_reports_styled_div_article_warning_in_non_normal_mode() -> None:
+    """非normalモードで囲み記事用style付きdivをwp:html保護対象として警告します。"""
+    load_file = (
+        '<div style="border:1px solid #999;padding:16px;'
+        'background-color:#f9f9f9;max-width:720px">\n'
+        "<p>囲み記事</p>\n"
+        "</div>"
+    )
+
+    issues = lint_wp_html(load_file, mode="middle")
+
+    assert any(
+        issue.level == "warning" and "囲み記事・レイアウト向け指定" in issue.message
+        for issue in issues
+    )
+    assert any("wp:html 保護対象" in issue.hint for issue in issues)
+
+
+def test_lint_skips_styled_div_article_warning_in_normal_mode() -> None:
+    """normalモードでは囲み記事用style付きdivの事業所WP警告を出しません。"""
+    load_file = '<div style="border:1px solid #999;padding:16px"><p>囲み記事</p></div>'
+
+    issues = lint_wp_html(load_file, mode="normal")
+
+    assert not any("囲み記事・レイアウト向け指定" in issue.message for issue in issues)
+
+
 def test_lint_css_reports_display_restrictions() -> None:
     """CSSファイルモードで表示・操作制限を検出するテストです。"""
     load_file = (
@@ -417,7 +465,10 @@ def test_lint_css_reports_display_restrictions() -> None:
 
     issues = lint_css(load_file)
 
-    assert any("display:none" in issue.message for issue in issues)
+    assert any(
+        issue.level == "warning" and "display:none" in issue.message
+        for issue in issues
+    )
     assert any("pointer-events:none" in issue.message for issue in issues)
     assert any("opacity:0" in issue.message for issue in issues)
     assert any("overflow:hidden" in issue.message for issue in issues)
@@ -452,6 +503,27 @@ def test_lint_css_reports_unmatched_braces() -> None:
     issues = lint_css(".card { display: block;")
 
     assert any("波括弧" in issue.message for issue in issues)
+
+
+def test_lint_css_reports_extra_closing_brace_line() -> None:
+    """余分な閉じ波括弧の行を検出するテストです。"""
+    issues = lint_css(".card { display: block; }\n}")
+
+    assert any(issue.line_number == 2 and "開始 {" in issue.message for issue in issues)
+
+
+def test_lint_css_reports_unclosed_block_comment() -> None:
+    """CSSコメントの閉じ忘れを検出するテストです。"""
+    issues = lint_css(".card { display: block; }\n/* temporary note\n.button { color:red; }")
+
+    assert any(issue.line_number == 2 and "CSSコメント" in issue.message for issue in issues)
+
+
+def test_lint_css_ignores_braces_inside_strings() -> None:
+    """CSS文字列内の波括弧は構文の波括弧として数えないテストです。"""
+    issues = lint_css('.icon::before { content: "{"; }\n.note::after { content: "}"; }')
+
+    assert not any("波括弧" in issue.message for issue in issues)
 
 
 def test_lint_passes_inline_code_inside_paragraph_block() -> None:
@@ -511,7 +583,9 @@ def test_lint_passes_safe_wp_html() -> None:
         '<h3 class="wp-block-heading">小見出し</h3>\n'
         "<!-- /wp:heading -->\n\n"
         "<!-- wp:table -->\n"
-        '<figure class="wp-block-table"><table><tbody><tr><td>内容</td></tr></tbody></table></figure>\n'
+        '<figure class="wp-block-table">'
+        "<table><tbody><tr><td>内容</td></tr></tbody></table>"
+        "</figure>\n"
         "<!-- /wp:table -->\n"
         '<img src="https://example.com/image.jpg" alt="説明">'
     )

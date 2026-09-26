@@ -9,9 +9,11 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 from html import unescape
+from html.parser import HTMLParser
 from re import Pattern
 from typing import Any, cast
 
+from blocks.html_block import create_html_block
 from blocks.list_block import normalize_adjacent_list_blocks
 from dictionaries.html_dict import (
     DIRECT_URL_RULES,
@@ -19,20 +21,26 @@ from dictionaries.html_dict import (
     HTML_ATTRIBUTE_PATTERN,
     HTML_BLOCK_RULES,
     HTML_BR_PATTERN,
+    HTML_DIV_HTML_BLOCK_STYLE_KEYWORDS,
     HTML_EMBED_RULE,
     HTML_EMPHASIS_PATTERN,
+    HTML_EXISTING_CUSTOM_HTML_BLOCK_PATTERN,
     HTML_LINK_PATTERN,
     HTML_LIST_ITEM_PATTERN,
     HTML_SHORTCODE_RULE,
     HTML_STRONG_PATTERN,
     HTML_TAG_PATTERN,
+    HTML_WORDPRESS_BLOCK_COMMENT_PATTERN,
 )
 
 
 def convert_html_to_gutenberg(load_file: str) -> str:
     """HTMLをWordPress Gutenberg向けHTMLに変換します。"""
     blocks: list[str] = []
-    block_matches: list[tuple[int, int, str, re.Match[str]]] = []
+    block_matches: list[tuple[int, int, str, re.Match[str] | str]] = []
+
+    for protected_start, protected_end, protected_html in _find_protected_html_blocks(load_file):
+        block_matches.append((protected_start, protected_end, "protected_html", protected_html))
 
     for block_type, rule in HTML_BLOCK_RULES.items():
         pattern = cast(Pattern[str], rule["pattern"])
@@ -40,7 +48,7 @@ def convert_html_to_gutenberg(load_file: str) -> str:
             block_matches.append((block_match.start(), block_match.end(), block_type, block_match))
 
     used_end = 0
-    sorted_matches: list[tuple[int, int, str, re.Match[str]]] = sorted(
+    sorted_matches: list[tuple[int, int, str, re.Match[str] | str]] = sorted(
         block_matches, key=lambda item: (item[0], -(item[1] - item[0]))
         )
 
@@ -49,6 +57,15 @@ def convert_html_to_gutenberg(load_file: str) -> str:
             continue
 
         used_end: int = end
+        if block_type == "protected_html":
+            protected_html = _remove_wordpress_block_comments(cast(str, block_match))
+            if HTML_EXISTING_CUSTOM_HTML_BLOCK_PATTERN.fullmatch(protected_html.strip()):
+                blocks.append(protected_html.strip())
+            else:
+                blocks.append(create_html_block(protected_html))
+            continue
+
+        block_match = cast(re.Match[str], block_match)
         rule: dict[str, Any] = HTML_BLOCK_RULES[block_type]
 
         if block_type == "paragraph":
@@ -142,6 +159,105 @@ def _clean_html_text(text: str) -> str:
     text = HTML_BR_PATTERN.sub("\n", text)
     text = HTML_TAG_PATTERN.sub("", text)
     return unescape(text).strip()
+
+
+def _remove_wordpress_block_comments(html_text: str) -> str:
+    return HTML_WORDPRESS_BLOCK_COMMENT_PATTERN.sub("", html_text)
+
+
+def _find_protected_html_blocks(load_file: str) -> list[tuple[int, int, str]]:
+    protected_blocks: list[tuple[int, int, str]] = []
+
+    for custom_html_match in HTML_EXISTING_CUSTOM_HTML_BLOCK_PATTERN.finditer(load_file):
+        protected_blocks.append(
+            (custom_html_match.start(), custom_html_match.end(), custom_html_match.group(0))
+        )
+
+    div_parser = _StyledDivHtmlBlockParser(load_file)
+    div_parser.feed(load_file)
+    protected_blocks.extend(div_parser.protected_blocks)
+    protected_blocks.sort(key=lambda item: (item[0], -(item[1] - item[0])))
+
+    filtered_blocks: list[tuple[int, int, str]] = []
+    used_end = 0
+    for start, end, html_text in protected_blocks:
+        if start < used_end:
+            continue
+        filtered_blocks.append((start, end, html_text))
+        used_end = end
+
+    return filtered_blocks
+
+
+class _StyledDivHtmlBlockParser(HTMLParser):
+    """装飾付きdivを親子ごとCustom HTMLとして保護するための簡易パーサーです。"""
+
+    def __init__(self, html_text: str) -> None:
+        super().__init__(convert_charrefs=False)
+        self.html_text = html_text
+        self.protected_blocks: list[tuple[int, int, str]] = []
+        self._line_offsets = _build_line_offsets(html_text)
+        self._div_stack: list[tuple[int, bool]] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag.lower() != "div":
+            return
+
+        start = self._current_absolute_position()
+        is_protected = _has_html_block_style(attrs)
+        self._div_stack.append((start, is_protected))
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag.lower() != "div" or not _has_html_block_style(attrs):
+            return
+
+        start = self._current_absolute_position()
+        starttag_text = self.get_starttag_text()
+        if starttag_text is None:
+            return
+
+        end = start + len(starttag_text)
+        self.protected_blocks.append((start, end, self.html_text[start:end]))
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag.lower() != "div" or not self._div_stack:
+            return
+
+        start, is_protected = self._div_stack.pop()
+        if not is_protected:
+            return
+
+        end_start = self._current_absolute_position()
+        end_match = re.match(r"</div\s*>", self.html_text[end_start:], re.IGNORECASE)
+        if not end_match:
+            return
+
+        end = end_start + len(end_match.group(0))
+        self.protected_blocks.append((start, end, self.html_text[start:end]))
+
+    def _current_absolute_position(self) -> int:
+        line_number, column_number = self.getpos()
+        return self._line_offsets[line_number - 1] + column_number
+
+
+def _build_line_offsets(text: str) -> list[int]:
+    offsets = [0]
+    for line_match in re.finditer(r"\n", text):
+        offsets.append(line_match.end())
+    return offsets
+
+
+def _has_html_block_style(attrs: list[tuple[str, str | None]]) -> bool:
+    style_text = ""
+    for name, value in attrs:
+        if name.lower() == "style" and value:
+            style_text = value.lower()
+            break
+
+    if not style_text:
+        return False
+
+    return any(keyword in style_text for keyword in HTML_DIV_HTML_BLOCK_STYLE_KEYWORDS)
 
 
 def _convert_html_link_to_markdown_link(link_match) -> str:

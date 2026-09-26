@@ -411,7 +411,7 @@ class TextEditorFrame(tk.Frame):
         prewp_issues = [issue for issue in issues if isinstance(issue, LintIssue)]
         if prewp_issues:
             return has_errors(prewp_issues)
-        return False
+        return any(self._issue_level(issue) == "error" for issue in issues)
 
     def _issue_line_number(self, issue: AnyLintIssue) -> int:
         if isinstance(issue, WpHtmlLintIssue):
@@ -420,7 +420,7 @@ class TextEditorFrame(tk.Frame):
 
     def _issue_level(self, issue: AnyLintIssue) -> str:
         if isinstance(issue, WpHtmlLintIssue):
-            return "warning"
+            return issue.level
         return issue.level
 
     def _create_default_wordpress_save_file_path(self) -> Path:

@@ -78,17 +78,33 @@ REAL_WORLD_SPLIT_PARAGRAPHS = """<!-- wp:paragraph -->
         ),
         (
             "リンク属性不足",
-            "<!-- wp:paragraph -->\n<p><a target=\"_blank\">公式サイト</a></p>\n<!-- /wp:paragraph -->",
+            (
+                "<!-- wp:paragraph -->\n"
+                '<p><a target="_blank">公式サイト</a></p>\n'
+                "<!-- /wp:paragraph -->"
+            ),
             "<a> タグに href がありません",
         ),
         (
             "画像属性不足",
-            "<!-- wp:image -->\n<figure class=\"wp-block-image\"><img src=\"https://example.com/a.jpg\"></figure>\n<!-- /wp:image -->",
+            (
+                "<!-- wp:image -->\n"
+                '<figure class="wp-block-image">'
+                '<img src="https://example.com/a.jpg">'
+                "</figure>\n"
+                "<!-- /wp:image -->"
+            ),
             "<img> タグに alt がありません",
         ),
         (
             "非normal不安定コアブロック",
-            "<!-- wp:embed -->\n<figure class=\"wp-block-embed\"><div>https://example.com</div></figure>\n<!-- /wp:embed -->",
+            (
+                "<!-- wp:embed -->\n"
+                '<figure class="wp-block-embed">'
+                "<div>https://example.com</div>"
+                "</figure>\n"
+                "<!-- /wp:embed -->"
+            ),
             "core/embed は事業所WPや高セキュリティ環境で表示されないことがあります",
         ),
         (
@@ -98,8 +114,23 @@ REAL_WORLD_SPLIT_PARAGRAPHS = """<!-- wp:paragraph -->
         ),
         (
             "表示制限style",
-            "<!-- wp:paragraph -->\n<p style=\"pointer-events:none\">本文です。</p>\n<!-- /wp:paragraph -->",
+            (
+                "<!-- wp:paragraph -->\n"
+                '<p style="pointer-events:none">本文です。</p>\n'
+                "<!-- /wp:paragraph -->"
+            ),
             "style に表示・操作を制限する指定があります",
+        ),
+        (
+            "囲み記事style付きdiv",
+            (
+                '<div style="border:1px solid #999;padding:16px;'
+                'background-color:#f9f9f9;max-width:720px">\n'
+                "<p>確認事項</p>\n"
+                "<ul><li>保存後の表示を確認します。</li></ul>\n"
+                "</div>"
+            ),
+            "囲み記事・レイアウト向け指定",
         ),
     ],
 )
@@ -138,6 +169,7 @@ def test_real_world_css_lint_case() -> None:
         ".hidden-post { display: none; }\n"
         ".button-link { pointer-events: none; }\n"
         ".article-body { overflow: hidden; }\n"
+        ".broken-frame { border: 1px solid #999;\n"
     )
 
     issues = lint_css(load_file)
@@ -145,3 +177,4 @@ def test_real_world_css_lint_case() -> None:
     assert any("display:none" in issue.message for issue in issues)
     assert any("pointer-events:none" in issue.message for issue in issues)
     assert any("overflow:hidden" in issue.message for issue in issues)
+    assert any("波括弧" in issue.message for issue in issues)
