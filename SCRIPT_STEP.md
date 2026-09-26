@@ -2,7 +2,7 @@
 
 ## Python environment
 
-D:\Dev\venvs\venv_txt_edit312\Scripts\python.exe
+D:\Dev\venvs\venv_wp_conv312\Scripts\python.exe
 
 ## Development Steps
 
@@ -67,12 +67,27 @@ This file records implementation notes and recommended next steps for `wp_conver
     - Documented the real-world lint tester command.
     - Documented the Gutenberg paragraph blank-line warning.
 
+11. Warning: styled div articles in office WordPress
+    - Temporary rule: when HTML input contains a `div` with decoration/layout styles such as `border`, `padding`, `margin`, `background`, `background-color`, `max-width`, `min-width`, `width`, `border-radius`, `display`, `grid-*`, or `flex-*`, keep the whole parent `div` and its children as one `wp:html` block.
+    - Do not split the inner `p`, `ul`, `ol`, or nested `div` into separate Gutenberg blocks in this case.
+    - Existing `wp:html` input must not be wrapped in another `wp:html` block.
+    - Reason: office WordPress may restrict styled frame articles, and preserving the original HTML is safer than converting it to `wp:group` or partial native blocks.
+    - This is a temporary safety rule. Add real saved test patterns after checking the office WordPress editor.
+
+12. Warning lint for styled div articles and CSS brace problems
+    - In `middle` / `office` / `high-security` / `hi-security` lint modes, styled `div` frame articles now warn that they are `wp:html` protection targets and need saved-output confirmation in office WordPress.
+    - The converter regression tests include styled frame articles, nested `div`, and existing `wp:html` input to avoid accidental block splitting or double wrapping.
+    - Protected styled `div` output removes inner Gutenberg comments such as `wp:paragraph` and `wp:list`; the `wp:html` block must contain ordinary HTML only.
+    - WP-TXT frame markers such as `[囲い込み]`, `[注意]`, and `[補足]` keep paragraphs and list-like lines as text with `<br>` / `<br><br>` inside one `wp:html` block.
+    - CSS lint reports display/interaction restrictions and now distinguishes missing `}`, extra `}`, and unclosed `/* ... */` comments with line numbers.
+    - WP HTML syntax breakage such as missing block end comments, missing `/`, mismatched blocks, malformed comments, and unclosed HTML tags is treated as `error`; display restrictions and office WordPress instability are treated as `warning`.
+
 ## Verification
 
 Run the focused real-world tester:
 
 ```powershell
-D:\Dev\venvs\venv_txt_edit312\Scripts\python.exe -m pytest tests/test_wp_html_lint_real_world_tester.py
+D:\Dev\venvs\venv_wp_conv312\Scripts\python.exe -m pytest tests/test_wp_html_lint_real_world_tester.py
 ```
 
 Latest result:
@@ -84,7 +99,7 @@ Latest result:
 Run WP HTML lint tests:
 
 ```powershell
-D:\Dev\venvs\venv_txt_edit312\Scripts\python.exe -m pytest tests/test_wp_html_lint.py tests/test_wp_html_lint_real_world_tester.py
+D:\Dev\venvs\venv_wp_conv312\Scripts\python.exe -m pytest tests/test_wp_html_lint.py tests/test_wp_html_lint_real_world_tester.py
 ```
 
 Latest result:
@@ -96,13 +111,13 @@ Latest result:
 Run the full suite:
 
 ```powershell
-D:\Dev\venvs\venv_txt_edit312\Scripts\python.exe -m pytest
+D:\Dev\venvs\venv_wp_conv312\Scripts\python.exe -m pytest
 ```
 
 Latest result:
 
 ```text
-167 passed
+213 passed
 ```
 
 ## Next Recommended Steps
