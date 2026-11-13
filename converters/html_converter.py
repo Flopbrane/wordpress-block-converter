@@ -33,6 +33,24 @@ from dictionaries.html_dict import (
     HTML_WORDPRESS_BLOCK_COMMENT_PATTERN,
 )
 
+ALL_WORDPRESS_BLOCK_COMMENT_PATTERN: re.Pattern[str] = re.compile(
+    r"<!--\s*/?wp:[a-zA-Z0-9_/-]+(?:\s+\{.*?\})?\s*-->",
+    re.IGNORECASE | re.DOTALL,
+)
+HTML_BODY_PATTERN: re.Pattern[str] = re.compile(
+    r"<body\b[^>]*>(.*?)</body>",
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def convert_source_html_to_gutenberg(load_file: str) -> str:
+    """明示的なHTMLソースを既存ブロック判定に止めずGutenbergへ変換します。"""
+    source_html = ALL_WORDPRESS_BLOCK_COMMENT_PATTERN.sub("", load_file)
+    body_match = HTML_BODY_PATTERN.search(source_html)
+    if body_match is not None:
+        source_html = body_match.group(1)
+    return convert_html_to_gutenberg(source_html)
+
 
 def convert_html_to_gutenberg(load_file: str) -> str:
     """HTMLをWordPress Gutenberg向けHTMLに変換します。"""
@@ -149,7 +167,12 @@ def convert_html_to_gutenberg(load_file: str) -> str:
         elif block_type == "spacer":
             blocks.append(rule["converter"]())
 
-    return normalize_adjacent_list_blocks("\n\n".join(blocks))
+    save_file = normalize_adjacent_list_blocks("\n\n".join(blocks))
+    if save_file:
+        return save_file
+
+    clean_html = load_file.strip()
+    return create_html_block(clean_html) if clean_html else ""
 
 
 def _clean_html_text(text: str) -> str:

@@ -13,13 +13,16 @@ from collections.abc import Callable
 from io import StringIO
 from pathlib import Path
 
-from converters.html_converter import convert_html_to_gutenberg
+from converters.html_converter import (
+    convert_html_to_gutenberg,
+    convert_source_html_to_gutenberg,
+)
 from converters.json_converter import convert_json_to_gutenberg
 from converters.markdown_converter import convert_markdown_to_gutenberg
 from converters.separated_values_converter import convert_separated_values_to_gutenberg
 from converters.text_converter import convert_text_to_gutenberg
 from converters.wp_txt_converter import convert_wp_txt_to_gutenberg
-from dictionaries.html_dict import HTML_EXTENSIONS
+from dictionaries.html_dict import HTML_EXTENSIONS, HTML_SOURCE_EXTENSIONS
 from dictionaries.json_dict import JSON_EXTENSIONS
 from dictionaries.markdown_dict import MARKDOWN_EXTENSIONS
 from dictionaries.separated_values_dict import (
@@ -84,6 +87,8 @@ def select_converter(
     file_extension: str = Path(load_file_path).suffix.lower()
     if file_extension in WP_TXT_EXTENSIONS:
         return convert_wp_txt_to_gutenberg
+    if file_extension in HTML_SOURCE_EXTENSIONS:
+        return convert_source_html_to_gutenberg
     if load_file is not None and _looks_like_existing_wordpress_html(load_file, file_extension):
         return keep_existing_wordpress_html
     if load_file is not None:

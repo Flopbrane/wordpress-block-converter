@@ -234,6 +234,8 @@ For HTML table input, a plain table without inline styling is converted to a `wp
 A decorated table with inline `style=`, unsupported classes/attributes, or an outer table wrapper is kept as one `wp:html` block. The original table, wrapper, caption, cell content, and attributes are kept instead of rebuilding a simplified table. Existing `wp:table` input is not double wrapped; supported fixed/auto layout attributes remain synchronized with the table class, while unknown existing core attributes are left unchanged.
 
 The editable table block outline is stored in `dictionaries/table_block_templates.json`. Row and cell data are still generated safely by Python. The PyInstaller specification includes this UTF-8 dictionary in distributed builds.
+
+Files ending in `.html` or `.htm` are always treated as source HTML, even when the first line is an existing `<!-- wp:... -->` comment. Existing Gutenberg comments are removed and the HTML elements are converted again into paragraph, heading, list, table, and other WordPress blocks. For complete HTML documents, only the contents of `<body>` are used. Files ending in `.wp_html` remain treated as already converted WordPress block HTML and are preserved when block comments are present. If source HTML contains no element supported by the native converters, it is still returned inside one `wp:html` block rather than as raw unwrapped HTML or an empty result.
 - `<hr>`
 
 `<b>` is converted to `<strong>`, and `<i>` is converted to `<em>` in the output.

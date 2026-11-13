@@ -213,6 +213,8 @@ HTML入力の表は、styleなしの単純な表なら `wp:table` に変換し�
 変更可能な表ブロック外形は `dictionaries/table_block_templates.json` に保存しています。可変の行・セルデータはPythonで安全に生成し、PyInstaller配布にもこのUTF-8辞書を同梱します。
 
 WP HTML lintは、`hasFixedLayout`と`has-fixed-layout`クラスの不一致をエラーとして検出し、`wp:table`の行・セルへ直接`style`を書いた場合は警告します。意図して`wp:html`に保持した装飾表には、この警告を出しません。
+
+`.html`／`.htm`は、先頭に既存の`<!-- wp:... -->`コメントがあっても、常に変換元HTMLとして扱います。既存Gutenbergコメントを外し、段落・見出し・リスト・表などをWordPressブロックへ再変換します。完全HTML文書では`<body>`内部だけを記事本文として使用します。`.wp_html`は変換済みWordPressブロックHTMLとして扱い、ブロックコメントがある場合は従来どおり保持します。対応するネイティブ変換要素がないHTMLも、生HTMLや空文字では返さず、1個の`wp:html`ブロックへ収めます。
 - `<hr>`
 
 `<b>` は `<strong>` に、`<i>` は `<em>` に寄せて出力します。

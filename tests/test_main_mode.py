@@ -95,6 +95,27 @@ def test_convert_file_keeps_existing_wp_html_from_md_file(tmp_path: Path) -> Non
     assert save_file == load_file
 
 
+def test_convert_file_converts_wp_html_wrapped_html_source(tmp_path: Path) -> None:
+    """HTML拡張子ではwp:htmlラッパー内もコアブロックへ変換するテストです。"""
+    load_file_path = tmp_path / "source.html"
+    save_file_path = tmp_path / "source_wordpress.wp_html"
+    load_file_path.write_text(
+        "<!-- wp:html -->\n"
+        "<h3>確認事項</h3><p>本文です。</p>\n"
+        "<!-- /wp:html -->",
+        encoding="utf-8",
+    )
+
+    convert_file(load_file_path, save_file_path, mode="normal")
+
+    save_file = save_file_path.read_text(encoding="utf-8")
+    assert '<!-- wp:heading {"level":3} -->' in save_file
+    assert '<h3 class="wp-block-heading">確認事項</h3>' in save_file
+    assert "<!-- wp:paragraph -->" in save_file
+    assert "<p>本文です。</p>" in save_file
+    assert "<!-- wp:html -->" not in save_file
+
+
 def test_convert_file_applies_rewrite_style_to_middle_mode(tmp_path: Path) -> None:
     """middleではrewrite_styleを通すテストです。"""
     load_file_path = tmp_path / "sample.md"

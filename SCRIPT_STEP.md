@@ -101,6 +101,18 @@ This file records implementation notes and recommended next steps for `wp_conver
     - Added regression coverage for HTML, Markdown, JSON, CSV/TSV/PSV, WP-TXT, existing Gutenberg comments, decorated 600px-style figures, wrappers, captions, rich cell content, span/scope attributes, Markdown-escaped HTML, template customization, and PyInstaller data inclusion.
     - Real Gutenberg paste, save, reload, and re-edit acceptance is still unverified. The bundled preview/core source confirms the expected save shape but is not a substitute for the editor workflow. A packaged EXE build and launch were not performed in this section.
 
+15. Explicit HTML source conversion to WordPress block HTML
+    - Root cause: `select_converter()` checked for existing `<!-- wp:... -->` content before checking the `.html` / `.htm` extension. An HTML source beginning with `<!-- wp:html -->` therefore selected `keep_existing_wordpress_html()` and bypassed `convert_html_to_gutenberg()` completely.
+    - Added `HTML_SOURCE_EXTENSIONS` for `.html` and `.htm`, and made this explicit source format take priority over the existing-WordPress-content shortcut. `.wp_html` remains the output/converted format and still preserves existing blocks.
+    - Added `convert_source_html_to_gutenberg()`. It removes existing Gutenberg block comments from explicit HTML source, extracts `<body>` when a complete HTML document is supplied, and then runs the normal HTML converter.
+    - The normal HTML converter now wraps unsupported-only HTML in one `wp:html` block when no native block was produced. It no longer returns an empty result or relies on unwrapped source HTML for that case.
+    - Added regressions at converter-selection, direct HTML conversion, body extraction, and real file I/O levels. Existing Markdown containing already-converted WordPress HTML and existing `.wp_html` behavior remain unchanged.
+    - Focused HTML/file-selection/main tests: 55 passed.
+    - Full pytest after this repair: 239 passed.
+    - Ruff: All checks passed.
+    - Targeted Pyright for `html_converter.py`, `file_checker.py`, and `main.py`: 0 errors, 0 warnings, 0 informations.
+    - Real Gutenberg editor and packaged EXE acceptance remain unverified.
+
 ## Verification
 
 Run the focused real-world tester:

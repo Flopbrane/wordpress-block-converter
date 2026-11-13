@@ -6,7 +6,10 @@
 #########################
 from __future__ import annotations
 
-from converters.html_converter import convert_html_to_gutenberg
+from converters.html_converter import (
+    convert_html_to_gutenberg,
+    convert_source_html_to_gutenberg,
+)
 
 
 def test_convert_html_converts_unordered_list_to_list_block() -> None:
@@ -379,3 +382,48 @@ def test_convert_html_mixed_direct_and_section_rows_do_not_drop_direct_row() -> 
     assert save_file.startswith("<!-- wp:html -->")
     assert "<tr><td>先頭行</td></tr>" in save_file
     assert "<tbody><tr><td>本文行</td></tr></tbody>" in save_file
+
+
+def test_convert_source_html_removes_existing_block_comments_before_conversion() -> None:
+    """HTMLソース内の既存ブロックコメントを外して内容を再変換するテストです。"""
+    load_file = (
+        "<!-- wp:html -->\n"
+        "<h2>見出し</h2><p>本文です。</p>\n"
+        "<!-- /wp:html -->"
+    )
+
+    save_file = convert_source_html_to_gutenberg(load_file)
+
+    assert '<!-- wp:heading {"level":2} -->' in save_file
+    assert "<!-- wp:paragraph -->" in save_file
+    assert "<!-- wp:html -->" not in save_file
+
+
+def test_convert_html_unknown_only_markup_is_wrapped_as_custom_html() -> None:
+    """対応ブロックがないHTMLも生HTMLや空文字で返さないテストです。"""
+    load_file = '<section class="profile">本文だけの独自HTML</section>'
+
+    save_file = convert_html_to_gutenberg(load_file)
+
+    assert save_file == (
+        "<!-- wp:html -->\n"
+        '<section class="profile">本文だけの独自HTML</section>\n'
+        "<!-- /wp:html -->"
+    )
+
+
+def test_convert_source_full_html_uses_body_content_only() -> None:
+    """完全HTML文書ではhead等を除きbody内部だけをwp_html化するテストです。"""
+    load_file = (
+        "<!DOCTYPE html><html><head><title>外側</title></head>"
+        '<body><section class="profile">記事本文</section></body></html>'
+    )
+
+    save_file = convert_source_html_to_gutenberg(load_file)
+
+    assert "<!DOCTYPE" not in save_file
+    assert "<html>" not in save_file
+    assert "<head>" not in save_file
+    assert "<title>" not in save_file
+    assert '<section class="profile">記事本文</section>' in save_file
+    assert save_file.startswith("<!-- wp:html -->")

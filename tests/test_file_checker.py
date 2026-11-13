@@ -19,6 +19,38 @@ def test_select_converter_keeps_existing_wp_html_even_if_extension_is_md() -> No
     assert save_file == load_file
 
 
+def test_select_converter_converts_html_extension_even_when_wp_html_wrapper_exists() -> None:
+    """HTMLソースはwp:html開始でも変換済み扱いせずコアブロックへ変換します。"""
+    load_file = (
+        "<!-- wp:html -->\n"
+        "<h2>見出し</h2><p>本文です。</p>\n"
+        "<!-- /wp:html -->"
+    )
+
+    converter = select_converter("sample.html", load_file)
+    save_file = converter(load_file)
+
+    assert '<!-- wp:heading {"level":2} -->' in save_file
+    assert '<h2 class="wp-block-heading">見出し</h2>' in save_file
+    assert "<!-- wp:paragraph -->" in save_file
+    assert "<p>本文です。</p>" in save_file
+    assert "<!-- wp:html -->" not in save_file
+
+
+def test_select_converter_keeps_existing_wp_html_extension() -> None:
+    """変換済みの.wp_htmlは従来どおりそのまま保持します。"""
+    load_file = (
+        "<!-- wp:html -->\n"
+        "<h2>見出し</h2><p>本文です。</p>\n"
+        "<!-- /wp:html -->"
+    )
+
+    converter = select_converter("sample.wp_html", load_file)
+    save_file = converter(load_file)
+
+    assert save_file == load_file
+
+
 def test_select_converter_detects_markdown_heading_from_content() -> None:
     """拡張子がtxtでもMarkdown見出しならMarkdown変換するテストです。"""
     load_file = "# タイトル\n\n本文です。"
