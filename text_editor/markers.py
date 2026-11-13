@@ -17,9 +17,10 @@ class Marker:
     before: str
     after: str = ""
     placeholder: str = ""
+    action: str = "wrap"
 
 
-MARKERS: tuple[Marker, ...] = (
+PREWP_MARKERS: tuple[Marker, ...] = (
     Marker("Paragraph", "<!-- wp:paragraph -->\n", "\n<!-- /wp:paragraph -->", "Body text"),
     Marker("Line breaks", "<!-- wp:paragraph -->\n", "\n<!-- /wp:paragraph -->", "Line 1\nLine 2"),
     Marker("HTML block", "[HTML]\n", "\n[/HTML]", "<div>HTML</div>"),
@@ -55,3 +56,55 @@ MARKERS: tuple[Marker, ...] = (
     Marker("Separator", "---", "", ""),
     Marker("Spacer", "[Spacer:25]", "", ""),
 )
+
+# 既存コードとの互換名です。新しい.txt編集ではMARKDOWN_MARKERSを使います。
+MARKERS: tuple[Marker, ...] = PREWP_MARKERS
+
+MARKDOWN_MARKERS: tuple[Marker, ...] = (
+    Marker("見出し1", "# ", placeholder="見出し", action="line_prefix"),
+    Marker("見出し2", "## ", placeholder="見出し", action="line_prefix"),
+    Marker("見出し3", "### ", placeholder="見出し", action="line_prefix"),
+    Marker("箇条書き", "- ", placeholder="項目", action="line_prefix"),
+    Marker("番号付きリスト", "", placeholder="項目", action="ordered_list"),
+    Marker("引用", "> ", placeholder="引用文", action="line_prefix"),
+    Marker("太字", "**", "**", "重要"),
+    Marker("インラインコード", "`", "`", "code"),
+    Marker("コードブロック", "```\n", "\n```", "code"),
+    Marker("リンク", "[", "](https://example.com/)", "表示名"),
+    Marker("画像", "![", "](https://example.com/image.jpg)", "代替テキスト"),
+    Marker(
+        "表",
+        "",
+        "",
+        "| 項目 | 説明 |\n|---|---|\n| A | 説明A |\n| B | 説明B |",
+    ),
+    Marker("区切り線", "---"),
+)
+
+
+def format_marker_text(marker: Marker, selected_text: str | None = None) -> str:
+    """選択文字列またはひな型へ、指定した記法を適用します。"""
+    target_text = marker.placeholder if selected_text is None else selected_text
+    if marker.action == "line_prefix":
+        return _prefix_each_line(target_text, marker.before)
+    if marker.action == "ordered_list":
+        return _number_each_line(target_text)
+    return f"{marker.before}{target_text}{marker.after}"
+
+
+def _prefix_each_line(text: str, prefix: str) -> str:
+    lines = text.splitlines() or [""]
+    return "\n".join(f"{prefix}{line}" if line else line for line in lines)
+
+
+def _number_each_line(text: str) -> str:
+    lines = text.splitlines() or [""]
+    item_number = 0
+    numbered_lines: list[str] = []
+    for line in lines:
+        if not line.strip():
+            numbered_lines.append(line)
+            continue
+        item_number += 1
+        numbered_lines.append(f"{item_number}. {line}")
+    return "\n".join(numbered_lines)

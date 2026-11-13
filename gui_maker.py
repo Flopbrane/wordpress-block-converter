@@ -163,7 +163,8 @@ def _should_open_text_editor(root: tk.Tk) -> bool:
     return messagebox.askyesno(
         "text_editorで開きますか？",
         "通常の .txt ファイルです。\n\n"
-        "WordPress変換用にマーカーを付けるため、text_editorで開きますか？\n\n"
+        "見出しやリストなどをMarkdown記法で整えるため、text_editorで開きますか？\n\n"
+        "編集後は元の .txt を残し、Markdown（.md）として保存できます。\n\n"
         "「いいえ」を選ぶと、従来通り通常段落として変換します。",
         parent=root,
     )

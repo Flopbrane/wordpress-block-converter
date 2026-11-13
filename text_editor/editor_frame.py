@@ -12,18 +12,48 @@ from pathlib import Path
 from tkinter import filedialog, messagebox
 from typing import cast
 
+from converters.markdown_converter import convert_markdown_to_gutenberg
 from converters.wp_txt_converter import convert_wp_txt_to_gutenberg
 from dictionaries.hi_security_dict import DISPLAY_CONVERSION_MODES, NORMAL_MODE
+from dictionaries.markdown_dict import MARKDOWN_EXTENSIONS
+from dictionaries.wp_txt_dict import WP_TXT_EXTENSIONS
 from lint import LintIssue as WpHtmlLintIssue
 from lint import lint_css, lint_wp_html
 from text_editor.linter import LintIssue, format_lint_issues, has_errors, lint_prewp_txt
+from text_editor.markdown_linter import lint_markdown
 from text_editor.marker_menu import MarkerMenu
+from text_editor.markers import MARKDOWN_MARKERS, PREWP_MARKERS
 
 AnyLintIssue = LintIssue | WpHtmlLintIssue
+MARKDOWN_EDITOR_EXTENSIONS: set[str] = {".txt"} | MARKDOWN_EXTENSIONS
+
+
+def is_markdown_editor_path(load_file_path: str | Path | None) -> bool:
+    """新規・平文・MarkdownをMarkdown編集経路として判定します。"""
+    if load_file_path is None:
+        return True
+    return Path(load_file_path).suffix.lower() in MARKDOWN_EDITOR_EXTENSIONS
+
+
+def create_default_markdown_save_file_path(load_file_path: str | Path | None) -> Path:
+    """元の.txtを残したまま保存する.mdパスを作ります。"""
+    if load_file_path is None:
+        return Path.cwd() / "article.md"
+    return Path(load_file_path).with_suffix(".md")
+
+
+def convert_editor_text_to_gutenberg(
+    load_file: str,
+    load_file_path: str | Path | None,
+) -> str:
+    """編集形式に対応するconverterでWordPress HTMLへ変換します。"""
+    if is_markdown_editor_path(load_file_path):
+        return convert_markdown_to_gutenberg(load_file)
+    return convert_wp_txt_to_gutenberg(load_file)
 
 
 class TextEditorFrame(tk.Frame):
-    """prewp_txtを作るための簡易エディタです。"""
+    """Markdownと既存prewp_txtを編集する簡易エディタです。"""
 
     def __init__(self, master: tk.Misc, load_file_path: str | Path | None = None) -> None:
         super().__init__(master)
@@ -34,6 +64,7 @@ class TextEditorFrame(tk.Frame):
         self.pack(fill="both", expand=True)
         self._create_widgets()
         self._create_menu()
+        self._refresh_editor_mode()
         if self.current_file_path:
             self.open_file(self.current_file_path)
 
@@ -51,6 +82,8 @@ class TextEditorFrame(tk.Frame):
             padx=(0, 8),
             pady=4,
         )
+        self.editor_mode_label = tk.Label(toolbar, text="", anchor="w")
+        self.editor_mode_label.pack(side="left", padx=(0, 8))
         self.lint_status_label = tk.Label(
             toolbar,
             text="文法チェック: 未実行",
@@ -79,7 +112,7 @@ class TextEditorFrame(tk.Frame):
         self.lint_issue_listbox.bind("<Motion>", self._show_lint_list_hover)
         self.lint_issue_listbox.bind("<Leave>", self._hide_lint_tooltip)
         self._last_lint_issues: list[AnyLintIssue] = []
-        MarkerMenu(self.text_area)
+        self.marker_menu = MarkerMenu(self.text_area, MARKDOWN_MARKERS)
 
     def _create_menu(self) -> None:
         root: tk.Tk | tk.Toplevel = self.winfo_toplevel()
@@ -88,6 +121,7 @@ class TextEditorFrame(tk.Frame):
         file_menu.add_command(label="開く", command=self.ask_open_file)
         file_menu.add_command(label="保存", command=self.save)
         file_menu.add_command(label="名前を付けて保存", command=self.save_as)
+        file_menu.add_command(label="Markdownとして保存", command=self.save_as_markdown)
         file_menu.add_command(label=".prewp_txtとして保存", command=self.save_as_prewp_txt)
         file_menu.add_command(label="WordPress HTMLへ変換して保存", command=self.convert_to_wordpress_html)
         file_menu.add_separator()
@@ -103,7 +137,8 @@ class TextEditorFrame(tk.Frame):
         load_file_path: str = filedialog.askopenfilename(
             title="開くファイルを選んでください",
             filetypes=[
-                ("編集対象", "*.txt *.prewp_txt *.wp_txt *.wptxt *.wp_html *.html *.htm *.css"),
+                ("編集対象", "*.txt *.md *.markdown *.prewp_txt *.wp_txt *.wptxt *.wp_html *.html *.htm *.css"),
+                ("Markdown", "*.md *.markdown"),
                 ("テキスト", "*.txt *.prewp_txt *.wp_txt *.wptxt"),
                 ("WordPress HTML", "*.wp_html *.html *.htm"),
                 ("CSS", "*.css"),
@@ -120,16 +155,19 @@ class TextEditorFrame(tk.Frame):
         self.text_area.delete("1.0", "end")
         self.text_area.insert("1.0", load_file)
         self._clear_lint_marks()
+        self._refresh_editor_mode()
         self.winfo_toplevel().title(f"text_editor - {self.current_file_path}")
 
     def save(self) -> bool:
         """現在のファイルへ保存します。"""
-        if self.current_file_path is None:
-            return self.save_as_prewp_txt()
+        if self.current_file_path is None or self.current_file_path.suffix.lower() == ".txt":
+            return self.save_as_markdown()
         return self._save_to_path(self.current_file_path)
 
     def save_as(self) -> bool:
         """名前を付けて保存します。"""
+        if self._is_markdown_mode():
+            return self.save_as_markdown()
         save_file_path: str = filedialog.asksaveasfilename(
             title="保存先を選んでください",
             defaultextension=".prewp_txt",
@@ -145,6 +183,26 @@ class TextEditorFrame(tk.Frame):
         if not save_file_path:
             return False
         return self._save_to_path(Path(save_file_path))
+
+    def save_as_markdown(self, show_completion: bool = True) -> bool:
+        """元ファイルを残し、標準の.mdとして保存します。"""
+        default_path = create_default_markdown_save_file_path(self.current_file_path)
+        save_file_path = filedialog.asksaveasfilename(
+            title="Markdownとして保存",
+            defaultextension=".md",
+            initialfile=default_path.name,
+            initialdir=str(default_path.parent),
+            filetypes=[
+                ("Markdown", "*.md *.markdown"),
+                ("すべてのファイル", "*.*"),
+            ],
+        )
+        if not save_file_path:
+            return False
+        save_path = Path(save_file_path)
+        if save_path.suffix.lower() not in MARKDOWN_EXTENSIONS:
+            save_path = save_path.with_suffix(".md")
+        return self._save_to_path(save_path, show_completion=show_completion)
 
     def save_as_prewp_txt(self) -> bool:
         """拡張子を.prewp_txtにして保存します。"""
@@ -165,7 +223,7 @@ class TextEditorFrame(tk.Frame):
             return False
         return self._save_to_path(Path(save_file_path).with_suffix(".prewp_txt"))
 
-    def _save_to_path(self, save_file_path: Path) -> bool:
+    def _save_to_path(self, save_file_path: Path, show_completion: bool = True) -> bool:
         save_file: str = self.text_area.get("1.0", "end-1c")
         issues: list[AnyLintIssue] = self._run_lint(save_file)
         if issues:
@@ -188,27 +246,38 @@ class TextEditorFrame(tk.Frame):
         save_file_path.parent.mkdir(parents=True, exist_ok=True)
         save_file_path.write_text(save_file, encoding="utf-8")
         self.current_file_path = save_file_path
+        self._refresh_editor_mode()
         self.winfo_toplevel().title(f"text_editor - {save_file_path}")
         self._set_lint_status(issues)
-        messagebox.showinfo("保存完了", f"保存しました。\n\n{save_file_path}", parent=self)
+        if show_completion:
+            messagebox.showinfo("保存完了", f"保存しました。\n\n{save_file_path}", parent=self)
         return True
 
     def convert_to_wordpress_html(self) -> bool:
-        """エディタ上の文字列を保存せず、そのままWordPress HTMLへ変換します。"""
-        load_file: str = self.text_area.get("1.0", "end-1c")
-        issues: list[AnyLintIssue] = self._run_lint(load_file)
-        if issues:
-            issue_text: str = self._format_lint_issues(issues)
-            if self._has_errors(issues):
-                should_convert = messagebox.askyesno(
-                    "lintエラーがあります",
-                    f"{issue_text}\n\nこのまま変換しますか？",
-                    parent=self.winfo_toplevel(),
-                )
-                if not should_convert:
-                    return False
-            else:
-                messagebox.showwarning("lint警告", issue_text, parent=self.winfo_toplevel())
+        """Markdown保存を先に行い、続けてWordPress HTMLへ変換します。"""
+        markdown_source_path: Path | None = None
+        if self._is_markdown_mode():
+            if not self.save_as_markdown(show_completion=False):
+                return False
+            markdown_source_path = self.current_file_path
+            if markdown_source_path is None:
+                return False
+            load_file = markdown_source_path.read_text(encoding="utf-8")
+        else:
+            load_file = self.text_area.get("1.0", "end-1c")
+            issues: list[AnyLintIssue] = self._run_lint(load_file)
+            if issues:
+                issue_text: str = self._format_lint_issues(issues)
+                if self._has_errors(issues):
+                    should_convert = messagebox.askyesno(
+                        "lintエラーがあります",
+                        f"{issue_text}\n\nこのまま変換しますか？",
+                        parent=self.winfo_toplevel(),
+                    )
+                    if not should_convert:
+                        return False
+                else:
+                    messagebox.showwarning("lint警告", issue_text, parent=self.winfo_toplevel())
 
         default_save_file_path: Path = self._create_default_wordpress_save_file_path()
         save_file_path: str = filedialog.asksaveasfilename(
@@ -226,13 +295,21 @@ class TextEditorFrame(tk.Frame):
             return False
 
         try:
-            save_file: str = convert_wp_txt_to_gutenberg(load_file)
+            save_file = convert_editor_text_to_gutenberg(load_file, self.current_file_path)
         except (ValueError, TypeError) as error:
             messagebox.showerror("変換エラー", str(error), parent=self.winfo_toplevel())
             return False
 
         Path(save_file_path).write_text(save_file, encoding="utf-8")
-        messagebox.showinfo("変換完了", f"変換しました。\n\n{save_file_path}", parent=self)
+        if markdown_source_path is not None:
+            complete_message = (
+                "Markdownを保存し、WordPress HTMLへ変換しました。\n\n"
+                f"Markdown:\n{markdown_source_path}\n\n"
+                f"WordPress HTML:\n{save_file_path}"
+            )
+        else:
+            complete_message = f"変換しました。\n\n{save_file_path}"
+        messagebox.showinfo("変換完了", complete_message, parent=self)
         return True
 
     def run_lint_check(self) -> None:
@@ -258,6 +335,8 @@ class TextEditorFrame(tk.Frame):
             issues = cast(list[AnyLintIssue], lint_css(load_file))
         elif self._should_use_wp_html_lint(load_file):
             issues = cast(list[AnyLintIssue], lint_wp_html(load_file, mode=self._lint_mode_var.get()))
+        elif self._is_markdown_mode():
+            issues = cast(list[AnyLintIssue], lint_markdown(load_file))
         else:
             issues = cast(list[AnyLintIssue], lint_prewp_txt(load_file))
         self._mark_lint_issues(issues)
@@ -265,6 +344,21 @@ class TextEditorFrame(tk.Frame):
 
     def _should_use_css_lint(self) -> bool:
         return bool(self.current_file_path and self.current_file_path.suffix.lower() == ".css")
+
+    def _is_markdown_mode(self) -> bool:
+        return is_markdown_editor_path(self.current_file_path)
+
+    def _refresh_editor_mode(self) -> None:
+        if self._is_markdown_mode():
+            self.marker_menu.set_markers(MARKDOWN_MARKERS)
+            self.editor_mode_label.configure(text="編集形式: Markdown")
+            return
+        if self.current_file_path and self.current_file_path.suffix.lower() in WP_TXT_EXTENSIONS:
+            self.marker_menu.set_markers(PREWP_MARKERS)
+            self.editor_mode_label.configure(text="編集形式: PRE-WP（互換）")
+            return
+        self.marker_menu.set_markers(PREWP_MARKERS)
+        self.editor_mode_label.configure(text="編集形式: 既存形式")
 
     def _should_use_wp_html_lint(self, load_file: str) -> bool:
         if self.current_file_path and self.current_file_path.suffix.lower() in {

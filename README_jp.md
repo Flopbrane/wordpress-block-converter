@@ -36,11 +36,15 @@ WordPressの記事下書きを作るときに、手作業でブロックコメ�
 | 区切り値ファイル | `.csv`, `.ssv`, `.tsv`, `.psv`, `.pipesv` |
 | JSON | `.json` |
 
-## 平文に目印を付けるルール
+## 平文をMarkdownで整えるルール
 
-普通の `.txt` は、空行で段落を分けるだけのシンプルな変換として扱います。変換前に、見出し、リスト、引用、コードブロック、表、リンク、画像などの目印を付けたい場合は、`text_editor` で開いてマーカーを付けてから変換します。詳しい書き方は [HOW_TO_USE_FOR_PLAIN_TEXT.md](HOW_TO_USE_FOR_PLAIN_TEXT.md) にまとめています。
+普通の `.txt` は、直接変換した場合、空行で段落を分けるシンプルな平文として扱います。見出し、リスト、引用、コードブロック、表、リンク、画像などを指定したい場合は、`text_editor`で開き、右クリックメニューから標準Markdown記法を付けます。編集後は元の`.txt`を残し、`.md`として保存するのが標準です。
 
-目印付きの平文は `.prewp_txt` として保存します。既存互換のため `.wp_txt` と `.wptxt` も引き続き使えます。`.txt` は意図的に「段落中心の平文」として扱います。
+`.txt`または`.md`を開いた場合、編集画面には「編集形式: Markdown」と表示されます。右クリックメニューでは、見出し、箇条書き、番号付きリスト、引用、太字、インラインコード、コードブロック、リンク、画像、表、区切り線を挿入できます。
+
+「WordPress HTMLへ変換して保存」を選ぶと、最初にMarkdownの保存先を確認します。Markdown保存が完了した場合だけ、続けて`.wp_html`の保存先を確認し、保存済みMarkdownを読み直して変換します。最初の保存画面をキャンセルした場合は、WordPress変換も中止します。
+
+既存の独自マーカー付き原稿は、`.prewp_txt`、`.wp_txt`、`.wptxt`として引き続き変換できます。これらを開いた場合だけ「編集形式: PRE-WP（互換）」と表示し、従来の独自マーカーメニューとlintを使用します。新しい通常原稿ではMarkdownを使用してください。
 
 ## バージョン対応
 
@@ -211,6 +215,33 @@ HTML入力の表は、styleなしの単純な表なら `wp:table` に変換し�
 `style=`、未対応のclass・属性、表を囲む外側ラッパーがある装飾表は、1つの `wp:html` ブロックとして元HTMLを保持します。表・ラッパー・キャプション・セル内容・属性を単純表へ作り直して落としません。既存の `wp:table` は二重に囲まず、対応済みの固定／自動レイアウトはコメントとtableクラスを同期し、未対応の既存コア属性は推測で変更しません。
 
 変更可能な表ブロック外形は `dictionaries/table_block_templates.json` に保存しています。可変の行・セルデータはPythonで安全に生成し、PyInstaller配布にもこのUTF-8辞書を同梱します。
+
+### EXEビルドと辞書ファイル
+
+PyInstallerビルドは、プロジェクトフォルダーで次を実行します。
+
+```powershell
+.\build.ps1
+```
+
+使用するPythonを明示する場合:
+
+```powershell
+.\build.ps1 -PythonPath D:\Dev\venvs\venv_wp_conv312\Scripts\python.exe
+```
+
+`build.ps1`は、PyInstallerが利用できるPythonを環境変数`WP_CONVERTER_PYTHON`、プロジェクト内`.venv`、既定の`venv_wp_conv312`、通常の`python`の順で探します。
+
+配布版には次の実行時データを収録します。
+
+- `_internal/dictionaries/table_block_templates.json`
+- `_internal/dictionaries/lint_reference.json`
+- `_internal/correct_data.json`
+- EXEと同じ場所の編集可能な`correct_data.json`
+
+ビルド前にJSON構文、ビルド後にEXEと収録ファイルの存在、JSON構文、元ファイルとのSHA-256一致を確認します。EXE隣接の`correct_data.json`が既にある場合は、利用者の内容を再ビルド後も保持します。
+
+配布するときは`wp-converter.exe`だけを取り出さず、`dist\wp-converter\`フォルダー全体を配布してください。
 
 WP HTML lintは、`hasFixedLayout`と`has-fixed-layout`クラスの不一致をエラーとして検出し、`wp:table`の行・セルへ直接`style`を書いた場合は警告します。意図して`wp:html`に保持した装飾表には、この警告を出しません。
 
@@ -406,7 +437,7 @@ CSSファイルでは主に次を確認します。
 問題がある場合は、行番号、重要度、問題内容、修正ヒントを表示します。
 WordPress保存時に崩れやすい文法破損はエラー、制限環境での表示リスクは警告として扱います。
 
-`text_editor` で `ツール > lintチェック` を実行すると、問題行がハイライトされます。ハイライト行にマウスを乗せると、警告内容と修正ヒントがホバー表示されます。`.css` を開いている場合はCSS lint、`.wp_html` / `.html` を開いている場合や、本文に `<!-- wp:` が含まれる場合はWordPress HTML lintとして確認します。
+`text_editor` で `ツール > lintチェック` を実行すると、問題行がハイライトされます。ハイライト行にマウスを乗せると、警告内容と修正ヒントがホバー表示されます。`.txt` / `.md` / `.markdown`では、閉じていないコードフェンス、閉じ丸括弧のないリンク・画像、見出し直後の空白漏れ、対になっていないインラインコードを確認します。`.prewp_txt`系は従来の独自マーカーlint、`.css`はCSS lint、`.wp_html` / `.html`、または本文に `<!-- wp:` がある場合はWordPress HTML lintとして確認します。
 
 実文章ベースのlint実働試験は、次のコマンドで実行できます。
 

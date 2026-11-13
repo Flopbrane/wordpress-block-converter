@@ -113,6 +113,50 @@ This file records implementation notes and recommended next steps for `wp_conver
     - Targeted Pyright for `html_converter.py`, `file_checker.py`, and `main.py`: 0 errors, 0 warnings, 0 informations.
     - Real Gutenberg editor and packaged EXE acceptance remain unverified.
 
+16. Markdown editing workflow for plain-text drafts
+    - Changed the `.txt` helper-editor workflow from newly inserting PRE-WP custom markers to inserting standard Markdown syntax. Direct `.txt` conversion outside the editor remains unchanged.
+    - Added separate `MARKDOWN_MARKERS` and retained `PREWP_MARKERS` plus the `MARKERS` compatibility alias. Markdown insertion supports headings, unordered and ordered lists, quotes, bold, inline/fenced code, links, images, pipe tables, and separators.
+    - Multi-line heading, list, and quote selections are prefixed line by line. Ordered selections are numbered while blank lines remain blank.
+    - Added editing-format switching. `.txt`, `.md`, `.markdown`, and a new untitled editor use Markdown menus and conversion. `.prewp_txt`, `.wp_txt`, and `.wptxt` retain the original marker menu, linter, and converter.
+    - Saving an opened `.txt` uses a Markdown Save As dialog with `.md` as the default, preserving the original `.txt`. Existing Markdown files save normally.
+    - Direct WordPress HTML export from a `.txt` or Markdown editing session now calls `convert_markdown_to_gutenberg()` explicitly. Legacy PRE-WP sessions continue to call `convert_wp_txt_to_gutenberg()`.
+    - Added a narrow Markdown linter for unclosed fenced code, broken link/image closing parentheses, missing spaces after heading markers, and unpaired inline-code backticks. Markdown-looking text inside fenced code is ignored.
+    - Added an editing-format label so the user can see `Markdown`, `PRE-WP (compatibility)`, or the existing format.
+    - Focused editor/GUI/converter tests: 100 passed.
+    - Full pytest: 257 passed.
+    - Ruff: All checks passed.
+    - Targeted Pyright: 0 errors, 0 warnings, 0 informations.
+    - Full Pyright: 1 existing unresolved `pytest` import in `tests/test_wp_html_lint_real_world_tester.py`; no new error remains from this section.
+    - Hidden GUI smoke test: Markdown mode label and selected-text heading insertion passed.
+    - Physical GUI use, packaged EXE build/launch, and WordPress editor acceptance remain unverified.
+
+17. Save Markdown before editor WordPress export
+    - Changed Markdown-mode `WordPress HTMLへ変換して保存` into a serial two-save workflow: choose the Markdown path, save the source, then choose the `.wp_html` path and convert.
+    - The converter reads the newly saved UTF-8 Markdown file instead of converting an unsaved editor buffer.
+    - Cancelling the Markdown save stops the workflow before the WordPress HTML save dialog. Cancelling the later WordPress dialog leaves the Markdown source safely saved.
+    - The intermediate Markdown save suppresses its standalone completion dialog; the final completion message lists both saved paths.
+    - PRE-WP compatibility mode keeps its existing direct export behavior.
+    - Focused Markdown-editor/GUI/lint tests: 21 passed.
+    - Physical GUI use, packaged EXE build/launch, and WordPress editor acceptance remain unverified.
+
+18. PyInstaller runtime-data completeness and verified build
+    - Audited all runtime file reads. The required static JSON files are `dictionaries/table_block_templates.json`, `dictionaries/lint_reference.json`, and `correct_data.json`.
+    - Updated `wp-converter.spec` to bundle all three files and fixed the one-directory contents folder as `_internal`.
+    - Updated `build.ps1` to locate a Python interpreter that actually has PyInstaller. It supports `-PythonPath` and `WP_CONVERTER_PYTHON`, then checks the project `.venv`, `venv_wp_conv312`, and normal `python`.
+    - Added pre-build source existence and JSON validation. Added post-build EXE existence, bundled JSON validation, and source/bundle SHA-256 equality checks.
+    - `correct_data.json` is bundled as an internal fallback and copied beside the EXE as an editable portable file. An existing adjacent copy is held in memory and restored after rebuilding.
+    - Added PyInstaller 6.22.2 to `requestments_dev.txt` and added packaging contract tests.
+    - PowerShell AST parse: passed.
+    - Focused packaging/table/lint/rewrite tests: 62 passed.
+    - Full pytest: 262 passed.
+    - Ruff: All checks passed.
+    - Packaging-test Pyright: 0 errors, 0 warnings, 0 informations.
+    - Actual `build.ps1` run: passed with PyInstaller 6.22.2 and Python 3.12.10.
+    - Bundled JSON verification: 3 files passed syntax and SHA-256 checks.
+    - Packaged EXE CLI smoke: passed for Markdown table to `wp_html`, exercising the bundled table template.
+    - PyInstaller warnings contained conditional/optional platform modules; no required application module omission was identified.
+    - Physical GUI operation and WordPress editor acceptance remain unverified.
+
 ## Verification
 
 Run the focused real-world tester:

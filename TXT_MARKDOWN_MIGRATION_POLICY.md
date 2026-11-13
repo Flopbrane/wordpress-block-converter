@@ -182,3 +182,48 @@ text_editorで標準Markdown記法を付ける
 - テスト、GUI、EXE、WordPress実サイト確認は実行しません。
 - 現在の独自マーカー機能は変更しません。
 - 次回、利用者から再開指示を受けるまで実装を開始しません。
+
+## 13. 2026年11月14日の実装結果
+
+第1段階から第3段階の基本経路を実装しました。
+
+- `.txt`、`.md`、`.markdown`では標準Markdownの右クリックメニューを使用します。
+- 新規エディターもMarkdown編集として開始します。
+- `.txt`を通常保存すると、元ファイルを残して`.md`へ保存する画面を開きます。
+- Markdown編集からのWordPress HTML出力は、既存のMarkdown converterを明示的に使用します。
+- `.prewp_txt`、`.wp_txt`、`.wptxt`では従来メニュー、lint、converterを維持します。
+- 編集画面に現在の形式を表示します。
+- Markdownのコードフェンス、リンク・画像、見出し空白、インラインコードを確認する基本lintを追加しました。
+- 注意枠、補足枠、任意スペーサー、画像横並びなど、標準Markdownにない装飾は今回追加していません。
+
+確認結果:
+
+- 関連テスト: 100 passed
+- 全体テスト: 257 passed
+- Ruff: All checks passed
+- 変更対象のPyright: 0 errors, 0 warnings, 0 informations
+- 全体Pyright: 既存の`tests/test_wp_html_lint_real_world_tester.py`にある`pytest` import未解決1件のみ
+- 非表示GUIスモークテスト: Markdown表示と選択見出し挿入に合格
+- 実際の画面操作、EXE、WordPress実サイト: 未確認
+
+## 14. Markdown保存後にWordPress変換する配線
+
+テキストエディターのMarkdownモードでは、WordPress HTML変換を次の順序へ変更しました。
+
+```text
+Markdown保存先を確認
+↓
+MarkdownをUTF-8で保存
+↓
+保存したMarkdownを読み直す
+↓
+wp_html保存先を確認
+↓
+WordPress HTMLへ変換して保存
+```
+
+- Markdown保存をキャンセルした場合は、wp_html保存画面を開きません。
+- wp_html保存をキャンセルした場合も、先に保存したMarkdownは残ります。
+- 最後の完了画面には、Markdownとwp_htmlの両方の保存場所を表示します。
+- PRE-WP互換形式は、従来の直接変換を維持します。
+- 自動テストで、保存画面の順序、Markdownの内容、wp_html出力、最初の保存キャンセルを確認しました。

@@ -34,11 +34,15 @@ This tool is designed for users who prefer preparing stable WordPress block HTML
 | Separated values | `.csv`, `.ssv`, `.tsv`, `.psv`, `.pipesv` |
 | JSON             | `.json`                                   |
 
-## Rules for Plain Text
+## Editing Plain Text as Markdown
 
-For ordinary `.txt` files, the converter keeps the rules simple: blank lines become paragraph breaks. If you want to add headings, lists, quotes, code blocks, tables, links, or images before conversion, open the file in `text_editor` and add markers before converting. The marker rules are described in [HOW_TO_USE_FOR_PLAIN_TEXT.md](HOW_TO_USE_FOR_PLAIN_TEXT.md).
+When converted directly, an ordinary `.txt` file remains simple plain text whose blank lines become paragraph breaks. To add headings, lists, quotes, code blocks, tables, links, or images, open the file in `text_editor` and use its context menu to insert standard Markdown syntax. The normal workflow keeps the original `.txt` file and saves the edited draft as `.md`.
 
-Save marked plain text as `.prewp_txt`. Existing `.wp_txt` and `.wptxt` files are still supported for compatibility. A plain `.txt` file is intentionally treated as paragraph-only text.
+Files ending in `.txt`, `.md`, or `.markdown` show `Markdown` as the editing format. Their context menu inserts headings, lists, quotes, bold text, inline/fenced code, links, images, tables, and separators.
+
+When `Save as WordPress HTML` is selected, the editor first asks where to save the Markdown source. Only after that save succeeds does it ask for the `.wp_html` destination, read the saved Markdown back, and convert it. Cancelling the Markdown save also cancels the WordPress conversion.
+
+Existing `.prewp_txt`, `.wp_txt`, and `.wptxt` drafts remain supported as a legacy format. Opening one of these files keeps the original marker menu, linter, and converter. New ordinary drafts should use Markdown.
 
 ## Version Support
 
@@ -235,6 +239,26 @@ A decorated table with inline `style=`, unsupported classes/attributes, or an ou
 
 The editable table block outline is stored in `dictionaries/table_block_templates.json`. Row and cell data are still generated safely by Python. The PyInstaller specification includes this UTF-8 dictionary in distributed builds.
 
+### EXE build and bundled dictionaries
+
+Run the PyInstaller build from the project folder:
+
+```powershell
+.\build.ps1
+```
+
+To select the build interpreter explicitly:
+
+```powershell
+.\build.ps1 -PythonPath D:\Dev\venvs\venv_wp_conv312\Scripts\python.exe
+```
+
+The build script locates a Python installation with PyInstaller through `WP_CONVERTER_PYTHON`, the project `.venv`, the standard `venv_wp_conv312`, or the normal `python` command. It bundles `table_block_templates.json`, `lint_reference.json`, and `correct_data.json` under `_internal`, and places an editable `correct_data.json` beside the EXE.
+
+Before building, JSON syntax is validated. After building, the script checks the EXE and every required data file, validates the bundled JSON, and compares SHA-256 hashes with the source files. An existing portable `correct_data.json` beside the EXE is preserved across rebuilds.
+
+Distribute the complete `dist\wp-converter\` folder, not only `wp-converter.exe`.
+
 Files ending in `.html` or `.htm` are always treated as source HTML, even when the first line is an existing `<!-- wp:... -->` comment. Existing Gutenberg comments are removed and the HTML elements are converted again into paragraph, heading, list, table, and other WordPress blocks. For complete HTML documents, only the contents of `<body>` are used. Files ending in `.wp_html` remain treated as already converted WordPress block HTML and are preserved when block comments are present. If source HTML contains no element supported by the native converters, it is still returned inside one `wp:html` block rather than as raw unwrapped HTML or an empty result.
 - `<hr>`
 
@@ -429,7 +453,7 @@ For CSS files, it checks:
 When issues are found, it prints the line number, severity, problem, and fix hint.
 Syntax breakage that can corrupt WordPress saves is reported as an error. Restricted-environment display risk is reported as a warning.
 
-In `text_editor`, use `Tools > lintチェック` to highlight issue lines. Hover over a highlighted line to see the warning and fix hint. Files ending in `.css` are checked with the CSS linter. Files ending in `.wp_html`, `.html`, or `.htm`, and text containing `<!-- wp:`, are checked with the WordPress HTML linter.
+In `text_editor`, use `Tools > lintチェック` to highlight issue lines. Hover over a highlighted line to see the warning and fix hint. Markdown editing checks unclosed code fences, links or images missing a closing parenthesis, headings missing the space after `#`, and unpaired inline-code backticks. Legacy PRE-WP files keep their marker linter. Files ending in `.css` are checked with the CSS linter. Files ending in `.wp_html`, `.html`, or `.htm`, and text containing `<!-- wp:`, are checked with the WordPress HTML linter.
 
 To run the real-world lint tester built from an actual article sample:
 
