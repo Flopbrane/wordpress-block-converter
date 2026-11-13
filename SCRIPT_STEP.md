@@ -82,6 +82,25 @@ This file records implementation notes and recommended next steps for `wp_conver
     - CSS lint reports display/interaction restrictions and now distinguishes missing `}`, extra `}`, and unclosed `/* ... */` comments with line numbers.
     - WP HTML syntax breakage such as missing block end comments, missing `/`, mismatched blocks, malformed comments, and unclosed HTML tags is treated as `error`; display restrictions and office WordPress instability are treated as `warning`.
 
+13. Warning: decorated HTML tables in office WordPress
+    - Temporary rule: plain HTML tables without inline styling can be converted to `wp:table`.
+    - If HTML input has `style=` on `table`, `thead`, `tbody`, `tr`, `th`, or `td`, keep the whole matched table as one `wp:html` block.
+    - Reason: WordPress table core blocks can become unstable when colors, backgrounds, borders, or padding are applied at row, header-cell, or body-cell level.
+    - For decorated tables, write background color directly on `td` / `th` rather than relying only on `tr`, then keep the result as Custom HTML.
+    - This is a temporary safety rule. Add real saved table patterns after checking the office WordPress editor.
+
+14. WordPress table block repair and dictionary-backed output
+    - Confirmed the bundled WordPress 7.1.3 `core/table` metadata and save code: `hasFixedLayout` defaults to `true`, and saved HTML adds `has-fixed-layout` to the `table` element when it is enabled.
+    - Standard table output now emits one synchronized shape: `<!-- wp:table -->`, `figure.wp-block-table`, and `table.has-fixed-layout`. Empty table sections are omitted instead of emitting an empty `tbody`.
+    - Existing `{"hasFixedLayout":false}` input stays auto-layout with a classless `table`. Existing table blocks with unhandled core attributes are preserved unchanged instead of being rebuilt speculatively.
+    - HTML tables with inline style, unsupported classes/attributes, mixed unsupported structure, or an outer `div` wrapper are kept as one `wp:html` block. Existing `wp:table` comments are removed before that fallback so the Custom HTML block does not contain nested Gutenberg comments.
+    - Core-supported `scope`, `colspan`, `rowspan`, text alignment, inline rich text, `thead` / `tbody` / `tfoot`, and `figcaption` are retained in native table output.
+    - Added `dictionaries/table_block_templates.json` plus its validated loader. The JSON owns block comments and table/section/row/cell/caption outlines; Python still owns parsing, escaping, row generation, and error handling.
+    - Added the JSON dictionary to `wp-converter.spec` so source and distributed execution use the same template path.
+    - WP HTML lint now detects fixed-layout/class mismatches and warns about direct row/cell style inside `wp:table`. Intentional `wp:html` tables are excluded from this warning.
+    - Added regression coverage for HTML, Markdown, JSON, CSV/TSV/PSV, WP-TXT, existing Gutenberg comments, decorated 600px-style figures, wrappers, captions, rich cell content, span/scope attributes, Markdown-escaped HTML, template customization, and PyInstaller data inclusion.
+    - Real Gutenberg paste, save, reload, and re-edit acceptance is still unverified. The bundled preview/core source confirms the expected save shape but is not a substitute for the editor workflow. A packaged EXE build and launch were not performed in this section.
+
 ## Verification
 
 Run the focused real-world tester:
@@ -117,7 +136,20 @@ D:\Dev\venvs\venv_wp_conv312\Scripts\python.exe -m pytest
 Latest result:
 
 ```text
-213 passed
+217 passed
+```
+
+Section 14 validation:
+
+```text
+Focused table/converter/lint tests: 129 passed
+Full pytest: 233 passed
+Ruff: All checks passed
+Targeted Pyright: 0 errors, 0 warnings, 0 informations
+Full Pyright: 1 existing unresolved pytest import in test_wp_html_lint_real_world_tester.py
+JSON syntax: passed for dictionaries/table_block_templates.json
+Real Gutenberg editor: not run
+Packaged EXE build/launch: not run
 ```
 
 ## Next Recommended Steps

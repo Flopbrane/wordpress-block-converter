@@ -228,6 +228,12 @@ Supported simple HTML input includes:
 - `<img>`
 - `<a>`
 - `<strong>`, `<b>`, `<em>`, `<i>`
+
+For HTML table input, a plain table without inline styling is converted to a `wp:table` block. The standard output follows the bundled WordPress 7.1.3 save shape by pairing the default fixed-layout block with `<table class="has-fixed-layout">`. Core-supported `scope`, `colspan`, `rowspan`, text alignment, inline emphasis, and `figcaption` content are retained.
+
+A decorated table with inline `style=`, unsupported classes/attributes, or an outer table wrapper is kept as one `wp:html` block. The original table, wrapper, caption, cell content, and attributes are kept instead of rebuilding a simplified table. Existing `wp:table` input is not double wrapped; supported fixed/auto layout attributes remain synchronized with the table class, while unknown existing core attributes are left unchanged.
+
+The editable table block outline is stored in `dictionaries/table_block_templates.json`. Row and cell data are still generated safely by Python. The PyInstaller specification includes this UTF-8 dictionary in distributed builds.
 - `<hr>`
 
 `<b>` is converted to `<strong>`, and `<i>` is converted to `<em>` in the output.
@@ -406,6 +412,8 @@ Temporary office WordPress warning:
 - It does not split the inner `p`, `ul`, `ol`, or nested `div` into separate Gutenberg blocks.
 - If Gutenberg block comments such as `wp:paragraph` or `wp:list` are found inside a protected frame, only those comments are removed so that the `wp:html` block contains ordinary HTML only.
 - Existing `wp:html` input is not wrapped in another `wp:html` block.
+- Decorated HTML tables are also kept as `wp:html` when `style=` appears on the table, row, header, or cell tags. Use `wp:table` for plain tables, and `wp:html` for tables with cell-level or row-level colors, backgrounds, borders, or padding.
+- WP HTML lint reports a mismatch between `hasFixedLayout` and the `has-fixed-layout` table class, and warns when row/cell `style` is written directly inside `wp:table`. A table intentionally kept in `wp:html` is not given that warning.
 - After saving in office WordPress, keep the saved HTML as a real regression sample if more restrictions appear.
 
 For CSS files, it checks:
@@ -501,6 +509,8 @@ wp_converter/
    ├─ json_dict.py
    ├─ markdown_dict.py
    ├─ separated_values_dict.py
+   ├─ table_block_templates.json
+   ├─ table_templates.py
    ├─ text_dict.py
    └─ wp_txt_dict.py
 ```

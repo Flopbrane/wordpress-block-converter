@@ -61,6 +61,7 @@ def test_convert_markdown_separates_table_list_and_code_from_paragraph() -> None
 
     assert "<p>前の文章です。</p>" in save_file
     assert "<!-- wp:table -->" in save_file
+    assert '<table class="has-fixed-layout">' in save_file
     assert "<!-- wp:list -->" in save_file
     assert "<!-- wp:list-item -->" in save_file
     assert "<!-- wp:code -->" in save_file
@@ -68,6 +69,20 @@ def test_convert_markdown_separates_table_list_and_code_from_paragraph() -> None
     assert "<p>前の文章です。<br><br>| 名前 | 値 |" not in save_file
     assert "<p>- 項目1" not in save_file
     assert "<p>```python" not in save_file
+
+
+def test_convert_markdown_table_keeps_escaped_html_as_text() -> None:
+    """MarkdownでエスケープされたHTML風文字列を実タグにしないテストです。"""
+    load_file = (
+        "| 表示例 |\n"
+        "|---|\n"
+        "| \\<strong>文字\\</strong> |"
+    )
+
+    save_file = convert_markdown_to_gutenberg(load_file)
+
+    assert "<strong>文字</strong>" not in save_file
+    assert "&lt;strong&gt;文字\\&lt;/strong&gt;" in save_file
 
 
 def test_convert_markdown_adds_ordered_list_attributes() -> None:

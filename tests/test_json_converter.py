@@ -59,6 +59,7 @@ def test_convert_json_table_rows_to_table_block() -> None:
     save_file = convert_json_to_gutenberg(load_file)
 
     assert "<!-- wp:table -->" in save_file
+    assert '<table class="has-fixed-layout">' in save_file
     assert "<th>商品</th>" in save_file
     assert "<td>Aプラン</td>" in save_file
     assert "<td>2000円</td>" in save_file

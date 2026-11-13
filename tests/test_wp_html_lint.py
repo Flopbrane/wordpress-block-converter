@@ -584,7 +584,7 @@ def test_lint_passes_safe_wp_html() -> None:
         "<!-- /wp:heading -->\n\n"
         "<!-- wp:table -->\n"
         '<figure class="wp-block-table">'
-        "<table><tbody><tr><td>内容</td></tr></tbody></table>"
+        '<table class="has-fixed-layout"><tbody><tr><td>内容</td></tr></tbody></table>'
         "</figure>\n"
         "<!-- /wp:table -->\n"
         '<img src="https://example.com/image.jpg" alt="説明">'
@@ -593,3 +593,56 @@ def test_lint_passes_safe_wp_html() -> None:
     issues = lint_wp_html(load_file)
 
     assert issues == []
+
+
+def test_lint_reports_table_fixed_layout_class_mismatch() -> None:
+    """tableの既定属性とhas-fixed-layoutクラス不一致を検出するテストです。"""
+    load_file = (
+        "<!-- wp:table -->\n"
+        '<figure class="wp-block-table"><table><tbody><tr><td>内容</td></tr>'
+        "</tbody></table></figure>\n"
+        "<!-- /wp:table -->"
+    )
+
+    issues = lint_wp_html(load_file)
+
+    assert any("has-fixed-layoutクラスがありません" in issue.message for issue in issues)
+
+
+def test_lint_reports_auto_layout_with_fixed_class() -> None:
+    """hasFixedLayout=falseと固定幅クラスの不一致を検出するテストです。"""
+    load_file = (
+        '<!-- wp:table {"hasFixedLayout":false} -->\n'
+        '<figure class="wp-block-table"><table class="has-fixed-layout">'
+        "<tbody><tr><td>内容</td></tr></tbody></table></figure>\n"
+        "<!-- /wp:table -->"
+    )
+
+    issues = lint_wp_html(load_file)
+
+    assert any("自動レイアウト" in issue.message for issue in issues)
+
+
+def test_lint_warns_for_direct_cell_style_in_table_block_only() -> None:
+    """wp:table内のセルstyleだけを警告し、wp:html表は対象外にするテストです。"""
+    table_block = (
+        "<!-- wp:table -->\n"
+        '<figure class="wp-block-table"><table class="has-fixed-layout"><tbody><tr>'
+        '<td style="background:#fff;">内容</td>'
+        "</tr></tbody></table></figure>\n"
+        "<!-- /wp:table -->"
+    )
+    html_block = (
+        "<!-- wp:html -->\n"
+        '<table><tbody><tr><td style="background:#fff;">内容</td></tr></tbody></table>\n'
+        "<!-- /wp:html -->"
+    )
+
+    table_issues = lint_wp_html(table_block)
+    html_issues = lint_wp_html(html_block)
+
+    assert any(
+        "行またはセルに直接style属性" in issue.message and issue.level == "warning"
+        for issue in table_issues
+    )
+    assert not any("行またはセルに直接style属性" in issue.message for issue in html_issues)

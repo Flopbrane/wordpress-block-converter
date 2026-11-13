@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "wordpress_core_version": "7.1.3",
+  "standard_table": {
+    "block_open": "<!-- wp:table -->",
+    "block_open_auto_layout": "<!-- wp:table {\"hasFixedLayout\":false} -->",
+    "block_close": "<!-- /wp:table -->",
+    "figure_open": "<figure class=\"wp-block-table\">",
+    "figure_close": "</figure>",
+    "table_open": "<table class=\"has-fixed-layout\">",
+    "table_open_auto_layout": "<table>",
+    "table_close": "</table>",
+    "section_open": {
+      "head": "<thead>",
+      "body": "<tbody>",
+      "foot": "<tfoot>"
+    },
+    "section_close": {
+      "head": "</thead>",
+      "body": "</tbody>",
+      "foot": "</tfoot>"
+    },
+    "row": "<tr>{cells}</tr>",
+    "cell": "<{tag}{attributes}>{content}</{tag}>",
+    "caption": "<figcaption class=\"wp-element-caption\">{content}</figcaption>"
+  },
+  "custom_html": {
+    "block_open": "<!-- wp:html -->",
+    "block_close": "<!-- /wp:html -->"
+  }
+}

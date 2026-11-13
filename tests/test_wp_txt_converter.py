@@ -139,6 +139,7 @@ def test_convert_wp_txt_links_images_code_and_table() -> None:
     assert "&lt;p&gt;これは段落です。&lt;/p&gt;" in save_file
     assert "<!-- wp:table -->" in save_file
     assert '<figure class="wp-block-table">' in save_file
+    assert '<table class="has-fixed-layout">' in save_file
     assert "<th>項目</th>" in save_file
     assert "<td>大きな区切り</td>" in save_file
 

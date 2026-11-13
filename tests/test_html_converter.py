@@ -163,3 +163,219 @@ def test_convert_html_existing_custom_html_keeps_outer_block_but_removes_inner_c
     assert "<!-- wp:paragraph -->" not in save_file
     assert "<!-- /wp:paragraph -->" not in save_file
     assert "<p>囲み記事</p>" in save_file
+
+
+def test_convert_html_simple_table_uses_table_block() -> None:
+    """styleなしの単純なHTML表はtableブロックへ変換するテストです。"""
+    load_file = (
+        "<table>"
+        "<thead><tr><th>種類</th><th>役割</th></tr></thead>"
+        "<tbody><tr><td>Aロール</td><td>メイン映像</td></tr></tbody>"
+        "</table>"
+    )
+
+    save_file = convert_html_to_gutenberg(load_file)
+
+    assert "<!-- wp:table -->" in save_file
+    assert '<figure class="wp-block-table"><table class="has-fixed-layout">' in save_file
+    assert "<th>種類</th>" in save_file
+    assert "<td>メイン映像</td>" in save_file
+    assert "<!-- wp:html -->" not in save_file
+
+
+def test_convert_html_styled_cell_table_uses_custom_html() -> None:
+    """td/thにstyleがある装飾表はCustom HTMLへ退避するテストです。"""
+    load_file = (
+        '<table style="border-collapse:collapse;width:100%;color:#333333;">'
+        "<thead><tr>"
+        '<th style="background-color:#eef8ff;color:#1f3b57;">種類</th>'
+        '<th style="background-color:#eef8ff;color:#1f3b57;">役割</th>'
+        "</tr></thead>"
+        "<tbody><tr>"
+        '<td style="background-color:#ffffff;padding:10px;"><strong>Aロール</strong></td>'
+        '<td style="background-color:#ffffff;padding:10px;">メイン映像</td>'
+        "</tr></tbody>"
+        "</table>"
+    )
+
+    save_file = convert_html_to_gutenberg(load_file)
+
+    assert save_file.startswith("<!-- wp:html -->")
+    assert "<!-- wp:table -->" not in save_file
+    assert '<table style="border-collapse:collapse;width:100%;color:#333333;">' in save_file
+    assert '<th style="background-color:#eef8ff;color:#1f3b57;">種類</th>' in save_file
+    assert '<td style="background-color:#ffffff;padding:10px;">' in save_file
+    assert save_file.endswith("<!-- /wp:html -->")
+
+
+def test_convert_html_styled_row_table_uses_custom_html() -> None:
+    """trにstyleがある装飾表もCustom HTMLへ退避するテストです。"""
+    load_file = (
+        "<table>"
+        "<tbody>"
+        '<tr style="background-color:#f9f9f9;">'
+        "<td>Aロール</td><td>メイン映像</td>"
+        "</tr>"
+        "</tbody>"
+        "</table>"
+    )
+
+    save_file = convert_html_to_gutenberg(load_file)
+
+    assert save_file.startswith("<!-- wp:html -->")
+    assert "<!-- wp:table -->" not in save_file
+    assert '<tr style="background-color:#f9f9f9;">' in save_file
+    assert "<td>Aロール</td>" in save_file
+
+
+def test_convert_html_figure_wrapped_styled_table_keeps_figure_in_custom_html() -> None:
+    """figure付きの装飾表はfigureごとCustom HTMLへ退避するテストです。"""
+    load_file = (
+        '<figure class="wp-block-table">'
+        '<table style="border-collapse:collapse;width:100%;">'
+        "<tbody><tr>"
+        '<td style="background-color:#ffffff;color:#333333;">Aロール</td>'
+        "<td>メイン映像</td>"
+        "</tr></tbody>"
+        "</table>"
+        "</figure>"
+    )
+
+    save_file = convert_html_to_gutenberg(load_file)
+
+    assert save_file.startswith("<!-- wp:html -->")
+    assert "<!-- wp:table -->" not in save_file
+    assert '<figure class="wp-block-table">' in save_file
+    assert '<table style="border-collapse:collapse;width:100%;">' in save_file
+    assert '<td style="background-color:#ffffff;color:#333333;">Aロール</td>' in save_file
+    assert save_file.endswith("<!-- /wp:html -->")
+
+
+def test_convert_html_figure_style_and_caption_stay_together_in_custom_html() -> None:
+    """figure装飾・caption・strongを落とさずCustom HTMLへ退避するテストです。"""
+    load_file = (
+        '<figure class="wp-block-table" style="max-width:600px;margin:2em auto;">'
+        '<table class="comparison"><thead><tr>'
+        '<th scope="col"><strong>種類</strong></th><th scope="col">役割</th>'
+        "</tr></thead><tbody><tr>"
+        '<td colspan="2">共通内容</td>'
+        "</tr></tbody></table>"
+        '<figcaption class="wp-element-caption">比較表</figcaption>'
+        "</figure>"
+    )
+
+    save_file = convert_html_to_gutenberg(load_file)
+
+    assert save_file.startswith("<!-- wp:html -->")
+    assert "<!-- wp:table -->" not in save_file
+    assert '<figure class="wp-block-table" style="max-width:600px;margin:2em auto;">' in save_file
+    assert '<th scope="col"><strong>種類</strong></th>' in save_file
+    assert '<td colspan="2">共通内容</td>' in save_file
+    assert '<figcaption class="wp-element-caption">比較表</figcaption>' in save_file
+
+
+def test_convert_html_core_supported_cell_attributes_and_caption_use_table_block() -> None:
+    """コアが保存できるscope・span・配置・captionは標準表で保持するテストです。"""
+    load_file = (
+        '<figure class="wp-block-table">'
+        "<table><thead><tr>"
+        '<th scope="col" colspan="2"><strong>種類</strong></th>'
+        "</tr></thead><tbody><tr>"
+        '<th scope="row" rowspan="2">A</th>'
+        '<td class="has-text-align-center" data-align="center">内容</td>'
+        "</tr></tbody></table>"
+        '<figcaption class="wp-element-caption">比較表</figcaption>'
+        "</figure>"
+    )
+
+    save_file = convert_html_to_gutenberg(load_file)
+
+    assert save_file.startswith("<!-- wp:table -->")
+    assert '<table class="has-fixed-layout">' in save_file
+    assert '<th scope="col" colspan="2"><strong>種類</strong></th>' in save_file
+    assert '<th scope="row" rowspan="2">A</th>' in save_file
+    assert '<td class="has-text-align-center" data-align="center">内容</td>' in save_file
+    assert '<figcaption class="wp-element-caption">比較表</figcaption>' in save_file
+
+
+def test_convert_html_existing_styled_table_block_becomes_one_custom_html_block() -> None:
+    """既存wp:tableの装飾表を二重コメントなしでCustom HTMLへ退避するテストです。"""
+    load_file = (
+        "<!-- wp:table -->\n"
+        '<figure class="wp-block-table"><table style="width:600px;">'
+        "<tbody><tr><td>内容</td></tr></tbody>"
+        "</table></figure>\n"
+        "<!-- /wp:table -->"
+    )
+
+    save_file = convert_html_to_gutenberg(load_file)
+
+    assert save_file.count("<!-- wp:html -->") == 1
+    assert save_file.count("<!-- /wp:html -->") == 1
+    assert "<!-- wp:table -->" not in save_file
+    assert "<!-- /wp:table -->" not in save_file
+    assert '<table style="width:600px;">' in save_file
+
+
+def test_convert_html_existing_auto_layout_table_keeps_comment_and_class_in_sync() -> None:
+    """hasFixedLayout=falseをクラスなしtableと対応させて保持するテストです。"""
+    load_file = (
+        '<!-- wp:table {"hasFixedLayout":false} -->\n'
+        '<figure class="wp-block-table"><table><tbody><tr>'
+        "<td>内容</td>"
+        "</tr></tbody></table></figure>\n"
+        "<!-- /wp:table -->"
+    )
+
+    save_file = convert_html_to_gutenberg(load_file)
+
+    assert save_file.startswith('<!-- wp:table {"hasFixedLayout":false} -->')
+    assert '<figure class="wp-block-table"><table><tbody>' in save_file
+    assert "has-fixed-layout" not in save_file
+    assert save_file.endswith("<!-- /wp:table -->")
+
+
+def test_convert_html_existing_table_with_unhandled_core_attributes_is_unchanged() -> None:
+    """未対応コア属性を持つ既存表を推測で作り直さないテストです。"""
+    load_file = (
+        '<!-- wp:table {"className":"is-style-stripes"} -->\n'
+        '<figure class="wp-block-table is-style-stripes">'
+        '<table class="has-fixed-layout"><tbody><tr><td>内容</td></tr></tbody></table>'
+        "</figure>\n"
+        "<!-- /wp:table -->"
+    )
+
+    save_file = convert_html_to_gutenberg(load_file)
+
+    assert save_file == load_file
+
+
+def test_convert_html_table_inside_plain_wrapper_keeps_wrapper_in_custom_html() -> None:
+    """表を囲むdivは装飾がなくても削らずCustom HTMLとして保持するテストです。"""
+    load_file = (
+        '<div class="table-scroll"><table><tbody><tr>'
+        "<td>内容</td>"
+        "</tr></tbody></table></div>"
+    )
+
+    save_file = convert_html_to_gutenberg(load_file)
+
+    assert save_file.startswith("<!-- wp:html -->")
+    assert '<div class="table-scroll"><table>' in save_file
+    assert save_file.endswith("<!-- /wp:html -->")
+
+
+def test_convert_html_mixed_direct_and_section_rows_do_not_drop_direct_row() -> None:
+    """tbody外の行が混ざる表は単純化せず全体を保持するテストです。"""
+    load_file = (
+        "<table>"
+        "<tr><td>先頭行</td></tr>"
+        "<tbody><tr><td>本文行</td></tr></tbody>"
+        "</table>"
+    )
+
+    save_file = convert_html_to_gutenberg(load_file)
+
+    assert save_file.startswith("<!-- wp:html -->")
+    assert "<tr><td>先頭行</td></tr>" in save_file
+    assert "<tbody><tr><td>本文行</td></tr></tbody>" in save_file

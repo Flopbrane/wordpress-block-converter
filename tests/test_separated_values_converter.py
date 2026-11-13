@@ -16,6 +16,7 @@ def test_convert_csv_to_table_block() -> None:
     save_file = convert_separated_values_to_gutenberg(load_file, ".csv")
 
     assert "<!-- wp:table -->" in save_file
+    assert '<table class="has-fixed-layout">' in save_file
     assert "<th>名前</th>" in save_file
     assert "<th>説明</th>" in save_file
     assert "<td>商品A</td>" in save_file

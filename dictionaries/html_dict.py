@@ -327,7 +327,11 @@ HTML_CODE_PATTERN: re.Pattern[str] = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 HTML_TABLE_PATTERN: re.Pattern[str] = re.compile(
-    r"<table\b[^>]*>.*?</table>", re.IGNORECASE | re.DOTALL
+    r"(?:<!--\s*wp:table(?:\s+\{.*?\})?\s*-->\s*)?"
+    r"(?:<figure\b[^>]*>\s*)?<table\b[^>]*>.*?</table>"
+    r"(?:\s*<figcaption\b[^>]*>.*?</figcaption>)?(?:\s*</figure>)?"
+    r"(?:\s*<!--\s*/wp:table\s*-->)?",
+    re.IGNORECASE | re.DOTALL,
 )
 HTML_IMAGE_PATTERN: re.Pattern[str] = re.compile(r"<img\b[^>]*>", re.IGNORECASE | re.DOTALL)
 HTML_ATTRIBUTE_PATTERN: re.Pattern[str] = re.compile(

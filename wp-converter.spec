@@ -5,7 +5,7 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[('dictionaries/table_block_templates.json', 'dictionaries')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

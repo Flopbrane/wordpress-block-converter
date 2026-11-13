@@ -197,15 +197,19 @@ class _StyledDivHtmlBlockParser(HTMLParser):
         self.html_text = html_text
         self.protected_blocks: list[tuple[int, int, str]] = []
         self._line_offsets = _build_line_offsets(html_text)
-        self._div_stack: list[tuple[int, bool]] = []
+        self._div_stack: list[tuple[int, bool, bool]] = []
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        if tag.lower() != "div":
+        clean_tag = tag.lower()
+        if clean_tag == "table":
+            self._mark_open_divs_containing_table()
+            return
+        if clean_tag != "div":
             return
 
         start = self._current_absolute_position()
         is_protected = _has_html_block_style(attrs)
-        self._div_stack.append((start, is_protected))
+        self._div_stack.append((start, is_protected, False))
 
     def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         if tag.lower() != "div" or not _has_html_block_style(attrs):
@@ -223,8 +227,8 @@ class _StyledDivHtmlBlockParser(HTMLParser):
         if tag.lower() != "div" or not self._div_stack:
             return
 
-        start, is_protected = self._div_stack.pop()
-        if not is_protected:
+        start, is_protected, contains_table = self._div_stack.pop()
+        if not is_protected and not contains_table:
             return
 
         end_start = self._current_absolute_position()
@@ -234,6 +238,12 @@ class _StyledDivHtmlBlockParser(HTMLParser):
 
         end = end_start + len(end_match.group(0))
         self.protected_blocks.append((start, end, self.html_text[start:end]))
+
+    def _mark_open_divs_containing_table(self) -> None:
+        self._div_stack = [
+            (start, is_protected, True)
+            for start, is_protected, _contains_table in self._div_stack
+        ]
 
     def _current_absolute_position(self) -> int:
         line_number, column_number = self.getpos()

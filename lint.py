@@ -96,6 +96,14 @@ TABLE_FIGURE_PATTERN: re.Pattern[str] = re.compile(
     re.IGNORECASE,
 )
 TABLE_TAG_PATTERN: re.Pattern[str] = re.compile(r"<table\b[^>]*>", re.IGNORECASE)
+TABLE_FIXED_CLASS_PATTERN: re.Pattern[str] = re.compile(
+    r"<table\b[^>]*class\s*=\s*['\"][^'\"]*\bhas-fixed-layout\b[^'\"]*['\"]",
+    re.IGNORECASE,
+)
+TABLE_CELL_STYLE_PATTERN: re.Pattern[str] = re.compile(
+    r"<(?:thead|tbody|tfoot|tr|th|td)\b[^>]*\bstyle\s*=",
+    re.IGNORECASE,
+)
 
 RAW_HTML_BLOCK_NAMES: set[str] = {"html", "code"}
 STABLE_NESTED_BLOCK_PARENTS: set[str] = {
@@ -815,7 +823,12 @@ def _close_block_comment(
     elif block_name == "heading":
         _lint_heading_block(issues, content, str(block_info["attrs"]), start_line_number)
     elif block_name == "table":
-        _lint_table_block(issues, content, start_line_number)
+        _lint_table_block(
+            issues,
+            content,
+            str(block_info["attrs"]),
+            start_line_number,
+        )
 
 
 def _lint_paragraph_block(
@@ -907,6 +920,7 @@ def _lint_heading_block(
 def _lint_table_block(
     issues: list[LintIssue],
     content: str,
+    attrs: str,
     line_number: int,
 ) -> None:
     if not TABLE_FIGURE_PATTERN.search(content):
@@ -921,6 +935,44 @@ def _lint_table_block(
             "table ブロック内に <table> がありません。",
             "<table>...</table> を追加してください。",
         ))
+        return
+
+    has_fixed_layout = _extract_table_fixed_layout(attrs)
+    has_fixed_class = TABLE_FIXED_CLASS_PATTERN.search(content) is not None
+    if has_fixed_layout is True and not has_fixed_class:
+        issues.append(LintIssue(
+            _find_issue_line_number(content, TABLE_TAG_PATTERN, line_number),
+            "tableブロックは固定レイアウトですが、tableにhas-fixed-layoutクラスがありません。",
+            'WordPressの保存形に合わせて <table class="has-fixed-layout"> にするか、ブロック属性を {"hasFixedLayout":false} にしてください。',
+        ))
+    elif has_fixed_layout is False and has_fixed_class:
+        issues.append(LintIssue(
+            _find_issue_line_number(content, TABLE_TAG_PATTERN, line_number),
+            "tableブロックは自動レイアウトですが、tableにhas-fixed-layoutクラスがあります。",
+            "ブロックコメントとtableクラスのどちらかを修正し、レイアウト指定を一致させてください。",
+        ))
+
+    style_match = TABLE_CELL_STYLE_PATTERN.search(content)
+    if style_match is not None:
+        issues.append(LintIssue(
+            line_number + content[:style_match.start()].count("\n"),
+            "tableブロックの行またはセルに直接style属性があります。",
+            "WordPressの標準table保存形と一致しない可能性があります。装飾を保持する場合はwp:html表を使用してください。",
+            level="warning",
+        ))
+
+
+def _extract_table_fixed_layout(attrs: str) -> bool | None:
+    if not attrs:
+        return True
+    try:
+        parsed_attrs = json.loads(attrs)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(parsed_attrs, dict):
+        return None
+    has_fixed_layout = parsed_attrs.get("hasFixedLayout", True)
+    return has_fixed_layout if isinstance(has_fixed_layout, bool) else None
 
 
 def _extract_heading_level(attrs: str) -> int | None:

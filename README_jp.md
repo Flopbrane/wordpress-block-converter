@@ -205,6 +205,14 @@ width: 240
 - `<img>`
 - `<a>`
 - `<strong>`, `<b>`, `<em>`, `<i>`
+
+HTML入力の表は、styleなしの単純な表なら `wp:table` に変換します。標準出力は同梱WordPress 7.1.3の保存形に合わせ、既定の固定レイアウトと `<table class="has-fixed-layout">` を対にします。コアが保存できる `scope`、`colspan`、`rowspan`、文字配置、セル内の強調、`figcaption` も保持します。
+
+`style=`、未対応のclass・属性、表を囲む外側ラッパーがある装飾表は、1つの `wp:html` ブロックとして元HTMLを保持します。表・ラッパー・キャプション・セル内容・属性を単純表へ作り直して落としません。既存の `wp:table` は二重に囲まず、対応済みの固定／自動レイアウトはコメントとtableクラスを同期し、未対応の既存コア属性は推測で変更しません。
+
+変更可能な表ブロック外形は `dictionaries/table_block_templates.json` に保存しています。可変の行・セルデータはPythonで安全に生成し、PyInstaller配布にもこのUTF-8辞書を同梱します。
+
+WP HTML lintは、`hasFixedLayout`と`has-fixed-layout`クラスの不一致をエラーとして検出し、`wp:table`の行・セルへ直接`style`を書いた場合は警告します。意図して`wp:html`に保持した装飾表には、この警告を出しません。
 - `<hr>`
 
 `<b>` は `<strong>` に、`<i>` は `<em>` に寄せて出力します。
@@ -478,6 +486,8 @@ wp_converter/
    ├─ json_dict.py
    ├─ markdown_dict.py
    ├─ separated_values_dict.py
+   ├─ table_block_templates.json
+   ├─ table_templates.py
    ├─ text_dict.py
    └─ wp_txt_dict.py
 ```
