@@ -1,4 +1,4 @@
-# pylint: disable=C0301
+# pylint: disable=C0301,W0201
 """平文入力補助エディタの画面本体です。"""
 #########################
 # Author: F.Kurokawa
